@@ -29,11 +29,17 @@
 		      <td>Cool!</td>
 					<td>4.7</td>
 		      <td styl>
-						<form method="POST" action="handler.php" align="right">
-							<button type="button" name="update" class="btn btn-success">Update</button> <button type="button" name="delete" class="btn btn-danger">Delete</button>
+						<form method="post" action="/index/1" align="right">
+							<button type="submit" name="update" value="1" class="btn btn-success">Update</button>
+						</form>
+						<form method="post" action="/index/2" align="right">
+							<button type="submit" name="delete" value="2" class="btn btn-danger">Delete</button>
 						</form>
 					</td>
 		    </tr>
 		  </tbody>
 		</table>
+		<form method="post" action="/index/3" align="center">
+			<button type="submit" name="add" value="3" class="btn btn-success">Add</button>
+		</form>
 	</body>
