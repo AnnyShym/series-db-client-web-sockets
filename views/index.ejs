@@ -22,24 +22,26 @@
 		    </tr>
 		  </thead>
 		  <tbody>
+				<% data.forEach(function(row) { %>
 		    <tr>
-		      <th scope="row">1</th>
-		      <td>Shameless</td>
-		      <td>USA</td>
-		      <td>Cool!</td>
-					<td>4.7</td>
+		      <th scope="row"><%= row.id %></th>
+		      <td><%= row.title %></td>
+		      <td><%= row.country %></td>
+		      <td><%= row.description %></td>
+					<td><%= row.rating %></td>
 		      <td styl>
-						<form method="post" action="/index/1" align="right">
-							<button type="submit" name="update" value="1" class="btn btn-success">Update</button>
+						<form method="post" action="/update/<%= row.id %>" align="right">
+							<button type="submit" name="update" class="btn btn-success">Update</button>
 						</form>
-						<form method="post" action="/index/2" align="right">
-							<button type="submit" name="delete" value="2" class="btn btn-danger">Delete</button>
+						<form method="post" action="/index/delete/<%= row.id %>" align="right">
+							<button type="submit" name="delete" class="btn btn-danger">Delete</button>
 						</form>
 					</td>
 		    </tr>
+				<% }); %>
 		  </tbody>
 		</table>
-		<form method="post" action="/index/3" align="center">
-			<button type="submit" name="add" value="3" class="btn btn-success">Add</button>
+		<form method="post" action="/insert" align="center">
+			<button type="submit" name="insert" class="btn btn-success">Insert</button>
 		</form>
 	</body>

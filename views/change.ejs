@@ -10,7 +10,7 @@
 	</head>
 
 	<body>
-    <form method="post" action="/update" align="center">
+    <form method="post" action="/change" align="center">
       <div class="form-group">
         <label for="exampleFormControlInput1">Title:</label>
         <input type="text" name="title" class="form-control" id="exampleFormControlInput1">
@@ -33,6 +33,6 @@
         <label for="exampleFormControlTextarea1">Description:</label>
         <textarea name="description" class="form-control" id="exampleFormControlTextarea1" rows="3"></textarea>
       </div>
-      <button type="submit" name="update" class="btn btn-success" align="senter">Update</button>
+      <button type="submit" name="<%= operation %>" class="btn btn-success" align="senter"><%= operation %></button>
     </form>
 	</body>
