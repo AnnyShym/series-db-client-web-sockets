@@ -10,7 +10,7 @@
 	</head>
 
 	<body>
-    <form method="post" action="/change" align="center">
+    <form method="post" action="/save" align="center">
       <div class="form-group">
         <label for="exampleFormControlInput1">Title:</label>
         <input type="text" name="title" class="form-control" id="exampleFormControlInput1">
@@ -21,7 +21,8 @@
       </div>
       <div class="form-group">
         <label for="exampleFormControlSelect1">Rating:</label>
-        <select class="form-control" id="exampleFormControlSelect1">
+        <select name="rating" class="form-control" id="exampleFormControlSelect1">
+					<option>NULL</option>
           <option>1</option>
           <option>2</option>
           <option>3</option>

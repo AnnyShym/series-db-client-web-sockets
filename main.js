@@ -22,12 +22,15 @@ app.set('view engine', 'ejs');
 var urlencodedParser = bodyParser.urlencoded({ extended: false });
 
 function insert(table, newSeries) {
-    let sql = `INSERT INTO ${table} SET ?`;
-    let query = db.query(sql, newSeries, (err, results) => {
+    if (newSeries.rating != "NULL")
+      newSeries.rating = `"${newSeries.rating}"`;
+    let sql = `INSERT INTO ${table} (id, title, country, description, rating) VALUES (NULL, "
+      ${newSeries.title}", "${newSeries.country}", "${newSeries.description}", ${newSeries.rating})`;
+    let query = db.query(sql, (err, results) => {
       if (err) {
           throw err;
       }
-      return results;
+      console.log(results);
     });
 }
 
@@ -37,17 +40,15 @@ function del(table, id) {
       if (err) {
           throw err;
       }
-      return results;
     });
 }
 
-function update(table, column, id, newValue) {
-    let sql = `UPDATE ${table} SET ${column} = ${newValue} WHERE id = ${id}`;
+function update(table, column, newValue, id) {
+    let sql = `UPDATE ${table} SET ${column} = "${newValue}" WHERE id = ${id}`;
     let query = db.query(sql, (err, results) => {
       if (err) {
           throw err;
       }
-      return results;
     });
 }
 
@@ -63,8 +64,8 @@ app.get('/', function(req, res) {
 
 app.post('/delete/:id', urlencodedParser, function(req, res) {
     del('series', req.params.id)
-    res.render('index');
-}
+    res.redirect('/');
+});
 
 var operation = null;
 var id = 0;
@@ -72,19 +73,21 @@ app.post('/update/:id', urlencodedParser, function(req, res) {
   operation = 'Update';
   id = req.params.id;
   res.render('change', {operation: operation});
-}
+});
 
 app.post('/insert', urlencodedParser, function(req, res) {
   operation = 'Insert';
   id = -1;
   res.render('change', {operation: operation});
-}
+});
 
 // res.render('change', {operation: (str[0].toUpperCase() + str.slice(1))});
 
-app.post('/change', urlencodedParser, function(req, res) {
+app.post('/save', urlencodedParser, function(req, res) {
   // validation
+  console.log("1");
   if (operation == 'Insert') {
+    console.log("2");
     insert('series', req.body);
   }
   else {
@@ -94,7 +97,7 @@ app.post('/change', urlencodedParser, function(req, res) {
     update('series', 'rating', req.body.rating, id);
   }
   // return res.sendStatus(400);
-  res.render('index');
+  res.redirect('/');
 });
 
 app.listen(3000, () => {
