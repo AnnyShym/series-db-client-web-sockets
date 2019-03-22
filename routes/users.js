@@ -1,11 +1,12 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const mysql = require('mysql');
-const expressValidator = require('express-validator');
-const main_module = require('./modules/main_module');
+const main = require('../main.js');
 
 const router = express.Router();
 const urlencodedParser = bodyParser.urlencoded({ extended: false });
+
+const db = main.db;
+const expressValidator = expressValidator;
 
 // Some information for queries
 const table = 'users';
@@ -16,6 +17,10 @@ const upCaseColumns = ['#', 'Login', 'Password'];
 
 // Some information for routing
 const changeRoute = 'change_users';
+
+// Some information for UI
+const opInsert = 'Insert';
+const opUpdate = 'Update';
 
 // Some validation information
 const loginMax = 50;
@@ -33,18 +38,42 @@ const msgPasswordLowLatin = 'Password must contain at least 1 latin lowercase le
 const msgPasswordUpLatin = 'Password must contain at least 1 latin uppercase letter!';
 const msgUniqueness =  'The entered login was already taken!';
 
-router.post(`./${table}/delete/:id`, urlencodedParser, function(req, res) {
-    main_module.deleteRowByIdAndResponse(table, req.params.id, res);
+router.post('/delete/:id', urlencodedParser, function(req, res) {
+    const statusCode = deleteRow(table, `id = ${req.params.id}`)
+    res.status(statusCode).redirect(`./${table}`);
 });
 
-router.post(`./${table}/insert`, urlencodedParser, function(req, res) {
-    main_module.prepareFormForInsertingAndResponse(changeRoute, table, columns,
-        upCaseColumns, res);
+var operation = null;
+var id = 0;
+
+router.post('/insert', urlencodedParser, function(req, res) {
+
+  operation = opInsert;
+  id = 0;
+
+  res.status(OK).render(changeRoute, {database: upCaseDataBase,
+      table: table, columns: columns, upCaseColumns: upCaseColumns,
+      operation: operation, rows: null, errors: null});
+
 });
 
-router.post(`./${table}/update/:id`, urlencodedParser, function(req, res) {
-    main_module.prepareFormForUpdatingAndResponse(changeRoute, table, columns,
-        upCaseColumns, req.params.id, res);
+router.post('/update/:id', urlencodedParser, function(req, res) {
+
+  operation = opUpdate;
+  id = req.params.id;
+
+  const sql = `SELECT * FROM ${table} WHERE id = ${id};`;
+  const query = db.query(sql, (err, rows) => {
+      if (err) {
+          req.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
+      }
+      else {
+          res.status(OK).render(changeRoute, {database: upCaseDataBase,
+              table: table, columns: columns, upCaseColumns: upCaseColumns,
+              operation: operation, rows: rows, errors: null});
+      }
+  });
+
 });
 
 function validateRequest(req) {
@@ -65,7 +94,7 @@ function validateRequest(req) {
 
   let errors = req.validationErrors();
   const sql = `SELECT * FROM ${table} WHERE login = "${req.body.login}";`;
-  const query = db.query(sql, (err, rows) => {
+  const query = main_module.db.query(sql, (err, rows) => {
       if (err) {
           req.status(main_module.INTERNAL_SERVER_ERROR)
               .send(main_module.internalErrorMessage);
@@ -81,19 +110,42 @@ function validateRequest(req) {
 
 }
 
-router.post(`./${table}/save`, urlencodedParser, function(req, res) {
-
+router.post('/save', urlencodedParser, function(req, res) {
     const errors = validateRequest(req);
+    if (errors) {
+        res.status(BAD_REQUEST).render(changeRoute, {
+            database: upCaseDataBase, table: table,
+            columns: columns, upCaseColumns: upCaseColumns,
+            operation: operation, rows: null, errors: errors});
+    }
+    else {
 
-    const newValues = `login = "${req.body.login}
-        ", password = "${req.body.password}"`;
-    main_module.handleErrorsSaveDataAndResponse(errors, changeRoute, columns,
-        upCaseColumns, newValues, res);
+        const newValues = `login = "${req.body.login}
+            ", password = "${req.body.password}"`;
+        let statusCode = 0;
+        if (operation == opInsert) {
+            statusCode = insertRow(table, newValues);
+        }
+        else {
+            statusCode = updateRow(table, newValues, `id = ${id}`);
+        }
 
+        res.status(statusCode).redirect(`./${table}`);
+
+    }
 });
 
-router.use(`./${table}`, function(req, res) {
-    main_module.selectAllToTableAndResponse(table, columns);
+router.use('/', urlencodedParser, function(req, res) {
+    const sql = `SELECT * FROM ${table};`;
+    const query = db.query(sql, (err, rows) => {
+        if (err) {
+            req.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
+        }
+        else {
+            res.status(OK).render(tableRoute, {database: upperCaseDataBase,
+                table: table, columns: columns, rows: rows});
+        }
+    });
 });
 
 module.exports = router;
