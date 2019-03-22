@@ -11,36 +11,10 @@
 	</head>
 
 	<body>
-		<table class="table table-striped">
-		  <thead>
-		    <tr>
-					<% columns.forEach(function(column) { %>
-		      	<th scope="col"><%= column %></th>
-					<% }); %>
-				  <th scope="col"></th>
-		    </tr>
-		  </thead>
-		  <tbody>
-				<% rows.forEach(function(row) { %>
-			    <tr>
-			      <th scope="row"><%= row.id %></th>
-			      <td><%= row.title %></td>
-			      <td><%= row.country %></td>
-			      <td><%= row.description %></td>
-						<td><%= row.rating %></td>
-			      <td styl>
-							<form method="post" action="/update/<%= row.id %>" align="right">
-								<button type="submit" name="update" class="btn btn-success">Update</button>
-							</form>
-							<form method="post" action="/delete/<%= row.id %>" align="right">
-								<button type="submit" name="delete" class="btn btn-danger">Delete</button>
-							</form>
-						</td>
-			    </tr>
-				<% }); %>
-		  </tbody>
-		</table>
-		<form method="post" action="/insert" align="center">
-			<button type="submit" name="insert" class="btn btn-success">Insert</button>
+		<form method="post" action="/<%= table1 %>" align="center">
+			<button type="submit" name="<%= table1 %>" class="btn btn-success"><%= table1 %></button>
+		</form>
+		<form method="post" action="/<%= table2 %>" align="center">
+			<button type="submit" name="<%= table2 %>" class="btn btn-danger"><%= table2 %></button>
 		</form>
 	</body>
