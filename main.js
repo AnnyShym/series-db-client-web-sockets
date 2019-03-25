@@ -1,9 +1,11 @@
 const express = require('express');
 const mysql = require('mysql');
+const bodyParser = require('body-parser');
 var expressValidator = require('express-validator');
 
 var app = express();
 app.set('view engine', 'ejs');
+const urlencodedParser = bodyParser.urlencoded({ extended: false });
 
 // Some server info
 const port = 3000;
@@ -12,7 +14,7 @@ const port = 3000;
 const host = 'localhost';
 const user = 'root';
 const password = '';
-const database = 'series';
+const databaseName = 'series';
 
 // Some information for routing
 const indexRoute = 'index';
@@ -23,7 +25,6 @@ const OK = 200;
 const CREATED = 201;
 const NO_CONTENT = 204;
 const BAD_REQUEST = 400;
-const NOT_FOUND = 404;
 const INTERNAL_SERVER_ERROR = 500
 
 // Status messages
@@ -34,15 +35,17 @@ const serverLog = `Server started on port ${port}.`;
 const connectionLog = 'MySql database was connected.';
 
 // Some information for UI
-const upCaseDataBase = database[0].toUpperCase() + database.slice(1);
+const upCaseDataBase = databaseName[0].toUpperCase() + databaseName.slice(1);
 const table1 = 'series';
 const table2 = 'users';
+const opInsert = 'Insert';
+const opUpdate = 'Update';
 
 var db = mysql.createConnection({
     host     : host,
     user     : user,
     password : password,
-    database : database
+    database : databaseName
 });
 
 db.connect((err) => {
@@ -68,11 +71,6 @@ app.use(expressValidator({
     };
   }
 }));
-
-module.exports = {
-    db: function () { return db; },
-    expressValidator: function () { return expressValidator; },
-}
 
 function insertRow(table, newValues) {
     const sql = `INSERT INTO ${table} SET ${newValues};`;
@@ -101,6 +99,28 @@ function updateRow(table, newValues, condition) {
     });
 }
 
+global.urlencodedParser = urlencodedParser;
+global.db = db;
+global.expressValidator = expressValidator;
+
+global.databaseName = databaseName;
+global.upCaseDataBase = upCaseDataBase;
+global.tableRoute = tableRoute;
+global.opInsert = opInsert;
+global.opUpdate = opUpdate;
+
+global.insertRow = insertRow;
+global.deleteRow = deleteRow;
+global.updateRow = updateRow;
+
+global.OK = OK;
+global.CREATED = CREATED;
+global.NO_CONTENT = NO_CONTENT;
+global.BAD_REQUEST = BAD_REQUEST;
+global.INTERNAL_SERVER_ERROR = INTERNAL_SERVER_ERROR;
+
+global.internalErrorMessage = internalErrorMessage;
+
 app.get('/', function(req, res) {
     res.status(OK).render(indexRoute, {database: upCaseDataBase,
         table1: table1, table2: table2});
@@ -110,6 +130,13 @@ let routerTable1 = require(`./routes/${table1}`);
 let routerTable2 = require(`./routes/${table2}`);
 app.use(`/${table1}`, routerTable1);
 app.use(`/${table2}`, routerTable2);
+
+/*
+const getAllSeries = require('./routes/series');
+const getAllUsers = require('./routes/users');
+
+app.use('/series', getAllSeries);
+app.use('/users', getAllUsers); */
 
 app.listen(port, () => {
     console.log(serverLog);

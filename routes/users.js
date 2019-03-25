@@ -1,12 +1,5 @@
 const express = require('express');
-const bodyParser = require('body-parser');
-const main = require('../main.js');
-
 const router = express.Router();
-const urlencodedParser = bodyParser.urlencoded({ extended: false });
-
-const db = main.db;
-const expressValidator = expressValidator;
 
 // Some information for queries
 const table = 'users';
@@ -17,10 +10,6 @@ const upCaseColumns = ['#', 'Login', 'Password'];
 
 // Some information for routing
 const changeRoute = 'change_users';
-
-// Some information for UI
-const opInsert = 'Insert';
-const opUpdate = 'Update';
 
 // Some validation information
 const loginMax = 50;
@@ -40,7 +29,7 @@ const msgUniqueness =  'The entered login was already taken!';
 
 router.post('/delete/:id', urlencodedParser, function(req, res) {
     const statusCode = deleteRow(table, `id = ${req.params.id}`)
-    res.status(statusCode).redirect(`./${table}`);
+    res.status(statusCode).redirect(`/${table}`);
 });
 
 var operation = null;
@@ -53,7 +42,7 @@ router.post('/insert', urlencodedParser, function(req, res) {
 
   res.status(OK).render(changeRoute, {database: upCaseDataBase,
       table: table, columns: columns, upCaseColumns: upCaseColumns,
-      operation: operation, rows: null, errors: null});
+      operation: operation, rows: null, validationErrors: null, uniquenessError: null});
 
 });
 
@@ -70,7 +59,7 @@ router.post('/update/:id', urlencodedParser, function(req, res) {
       else {
           res.status(OK).render(changeRoute, {database: upCaseDataBase,
               table: table, columns: columns, upCaseColumns: upCaseColumns,
-              operation: operation, rows: rows, errors: null});
+              operation: operation, rows: rows, validationErrors: null, uniquenessError: null});
       }
   });
 
@@ -84,7 +73,6 @@ function validateRequest(req) {
       .isLength({ max: loginMax }).withMessage(msgLoginMax)
 
   req.check('password')
-      .trim()
       .isLength({ min: passwordMin }).withMessage(msgPasswordMin)
       .isLength({ max: passwordMax }).withMessage(msgPasswordMax)
       .isAscii().withMessage(msgPasswordAsciiOnly)
@@ -92,31 +80,37 @@ function validateRequest(req) {
       .matches('[a-z]').withMessage(msgPasswordLowLatin)
       .matches('[A-Z]').withMessage(msgPasswordUpLatin);
 
-  let errors = req.validationErrors();
-  const sql = `SELECT * FROM ${table} WHERE login = "${req.body.login}";`;
-  const query = main_module.db.query(sql, (err, rows) => {
+  var uniquenessError = null;
+  const sql = `SELECT * FROM ${table};`;
+  const query = db.query(sql, (err, rows) => {
       if (err) {
-          req.status(main_module.INTERNAL_SERVER_ERROR)
-              .send(main_module.internalErrorMessage);
+          req.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
       }
       else {
-          if (rows) {
-              errors.push({msg: msgUniqueness});
+          for (let i = 0; i < rows.length; i++) {
+              if (rows[i].login.trim() == req.body.login) {
+                  uniquenessError = {param: 'login',
+                      msg: msgUniqueness,
+                      value: req.body.login};
+                  break;
+              }
           }
       }
   });
 
-  return errors;
+  return {validationErrors: req.validationErrors(), uniquenessError: uniquenessError};
 
 }
 
 router.post('/save', urlencodedParser, function(req, res) {
     const errors = validateRequest(req);
-    if (errors) {
+    const validationErrors = errors.validationErrors;
+    const uniquenessError = errors.uniquenessError;
+    if (validationErrors || uniquenessError) {
         res.status(BAD_REQUEST).render(changeRoute, {
             database: upCaseDataBase, table: table,
             columns: columns, upCaseColumns: upCaseColumns,
-            operation: operation, rows: null, errors: errors});
+            operation: operation, rows: null, validationErrors: validationErrors, uniquenessError: uniquenessError});
     }
     else {
 
@@ -130,7 +124,7 @@ router.post('/save', urlencodedParser, function(req, res) {
             statusCode = updateRow(table, newValues, `id = ${id}`);
         }
 
-        res.status(statusCode).redirect(`./${table}`);
+        res.status(statusCode).redirect('.');
 
     }
 });
@@ -142,7 +136,7 @@ router.use('/', urlencodedParser, function(req, res) {
             req.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
         }
         else {
-            res.status(OK).render(tableRoute, {database: upperCaseDataBase,
+            res.status(OK).render(tableRoute, {database: upCaseDataBase,
                 table: table, columns: columns, rows: rows});
         }
     });

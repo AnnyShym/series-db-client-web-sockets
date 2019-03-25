@@ -1,13 +1,7 @@
 const express = require('express');
-const bodyParser = require('body-parser');
-const main = require('../main.js')
 const countries = require('../modules/countries');
 
 const router = express.Router();
-const urlencodedParser = bodyParser.urlencoded({ extended: false });
-
-const db = main.db;
-const expressValidator = expressValidator;
 
 // Some information for queries
 const table = 'series';
@@ -19,10 +13,6 @@ const ratingOptions = ['NULL', '1', '2', '3', '4', '5'];
 
 // Some information for routing
 const changeRoute = 'change_series';
-
-// Some information for UI
-const opInsert = 'Insert';
-const opUpdate = 'Update';
 
 // Some validation information
 const titleMax = 50;
@@ -37,7 +27,7 @@ msgDescriptionAsciiOnly = 'Description may contain only ASCII symbols!';
 
 router.post('/delete/:id', function(req, res) {
     const statusCode = deleteRow(table, `id = ${req.params.id}`)
-    res.status(statusCode).redirect(`./${table}`);
+    res.status(statusCode).redirect(`/${table}`);
 });
 
 var operation = null;
@@ -50,7 +40,7 @@ router.post('/insert', urlencodedParser, function(req, res) {
 
   res.status(OK).render(changeRoute, {database: upCaseDataBase,
       table: table, columns: columns, upCaseColumns: upCaseColumns,
-      operation: operation, rows: null, errors: null});
+      operation: operation, ratingOptions: ratingOptions, countries: countries, rows: null, errors: null});
 
 });
 
@@ -67,7 +57,7 @@ router.post('/update/:id', urlencodedParser, function(req, res) {
       else {
           res.status(OK).render(changeRoute, {database: upCaseDataBase,
               table: table, columns: columns, upCaseColumns: upCaseColumns,
-              operation: operation, rows: rows, errors: null});
+              operation: operation, ratingOptions: ratingOptions, countries: countries, rows: rows, errors: null});
       }
   });
 
@@ -83,8 +73,12 @@ function validateRequest(req) {
 
   req.check('description')
       .trim()
-      .isLength({ max: descriptionMax }).withMessage(msgDescriptionMax)
+      .isLength({ max: descriptionMax }).withMessage(msgDescriptionMax);
+
+  if (req.body.description != '') {
+      req.check('description')
       .isAscii().withMessage(msgDescriptionAsciiOnly);
+  }
 
   return req.validationErrors();
 
@@ -96,12 +90,21 @@ router.post('/save', urlencodedParser, function(req, res) {
         res.status(BAD_REQUEST).render(changeRoute, {
             database: upCaseDataBase, table: table,
             columns: columns, upCaseColumns: upCaseColumns,
-            operation: operation, rows: null, errors: errors});
+            operation: operation, ratingOptions: ratingOptions, countries: countries, rows: null, errors: errors});
     }
     else {
 
-        const newValues = `login = "${req.body.login}
-            ", password = "${req.body.password}"`;
+        if (req.body.country != 'NULL') {
+            req.body.country = `"${req.body.country}"`;
+        }
+
+        if (req.body.rating != 'NULL') {
+            req.body.rating = `"${req.body.rating}"`;
+        }
+
+        const newValues = `title = "${req.body.title}
+            ", country = ${req.body.country}, description = "${req.body.description}
+            ", rating = ${req.body.rating}`;
         let statusCode = 0;
         if (operation == opInsert) {
             statusCode = insertRow(table, newValues);
@@ -110,7 +113,7 @@ router.post('/save', urlencodedParser, function(req, res) {
             statusCode = updateRow(table, newValues, `id = ${id}`);
         }
 
-        res.status(statusCode).redirect(`./${table}`);
+        res.status(statusCode).redirect('.');
 
     }
 });
@@ -122,7 +125,7 @@ router.use('/', urlencodedParser, function(req, res) {
             req.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
         }
         else {
-            res.status(OK).render(tableRoute, {database: upperCaseDataBase,
+            res.status(OK).render(tableRoute, {database: upCaseDataBase,
                 table: table, columns: columns, rows: rows});
         }
     });
