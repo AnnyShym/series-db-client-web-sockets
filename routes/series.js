@@ -12,7 +12,7 @@ const upCaseColumns = ['#', 'Title', 'Country', 'Description', 'Rating'];
 const ratingOptions = ['NULL', '1', '2', '3', '4', '5'];
 
 // Some information for routing
-const changeRoute = 'change_series';
+const changeRoute = 'change/series';
 
 // Some validation information
 const titleMax = 50;
@@ -119,14 +119,14 @@ router.post('/save', urlencodedParser, function(req, res) {
 });
 
 router.use('/', urlencodedParser, function(req, res) {
-    const sql = `SELECT * FROM ${table};`;
+    const sql = `SELECT * FROM ${table} ORDER BY title ASC, rating DESC;`;
     const query = db.query(sql, (err, rows) => {
         if (err) {
             req.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
         }
         else {
             res.status(OK).render(tableRoute, {database: upCaseDataBase,
-                table: table, columns: columns, rows: rows});
+                table: table, columns: columns, upCaseColumns: upCaseColumns, rows: rows});
         }
     });
 });

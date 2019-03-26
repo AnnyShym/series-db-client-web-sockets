@@ -9,7 +9,7 @@ const columns = ['#', 'login', 'password'];
 const upCaseColumns = ['#', 'Login', 'Password'];
 
 // Some information for routing
-const changeRoute = 'change_users';
+const changeRoute = 'change/users';
 
 // Some validation information
 const loginMax = 50;
@@ -130,14 +130,14 @@ router.post('/save', urlencodedParser, function(req, res) {
 });
 
 router.use('/', urlencodedParser, function(req, res) {
-    const sql = `SELECT * FROM ${table};`;
+    const sql = `SELECT * FROM ${table} ORDER BY id ASC;`;
     const query = db.query(sql, (err, rows) => {
         if (err) {
             req.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
         }
         else {
             res.status(OK).render(tableRoute, {database: upCaseDataBase,
-                table: table, columns: columns, rows: rows});
+                table: table, columns: columns, upCaseColumns: upCaseColumns, rows: rows});
         }
     });
 });

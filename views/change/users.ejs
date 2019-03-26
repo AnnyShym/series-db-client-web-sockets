@@ -22,7 +22,7 @@
     <form method="post" action="/<%= table %>/save" align="center">
       <div class="form-group">
         <label for="exampleFormControlInput1"><%= upCaseColumns[1] %>:</label>
-        <input type="text" name="<%= columns[1] %>" <% if (rows) { %> value="<%= rows[0].login.trim() %>" <% } %> class="form-control" id="exampleFormControlInput1" required>
+        <input type="text" name="<%= columns[1] %>" <% if (rows && rows[0].login) { %> value="<%= rows[0].login.trim() %>" <% } %> class="form-control" id="exampleFormControlInput1" required>
       </div>
       <div class="form-group">
         <label for="exampleFormControlInput1"><%= upCaseColumns[2] %>:</label>

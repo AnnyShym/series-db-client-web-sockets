@@ -38,6 +38,7 @@ const connectionLog = 'MySql database was connected.';
 const upCaseDataBase = databaseName[0].toUpperCase() + databaseName.slice(1);
 const table1 = 'series';
 const table2 = 'users';
+const table3 = 'actors';
 const opInsert = 'Insert';
 const opUpdate = 'Update';
 
@@ -123,20 +124,15 @@ global.internalErrorMessage = internalErrorMessage;
 
 app.get('/', function(req, res) {
     res.status(OK).render(indexRoute, {database: upCaseDataBase,
-        table1: table1, table2: table2});
+        table1: table1, table2: table2, table3: table3});
 });
 
-let routerTable1 = require(`./routes/${table1}`);
-let routerTable2 = require(`./routes/${table2}`);
+const routerTable1 = require(`./routes/${table1}`);
+const routerTable2 = require(`./routes/${table2}`);
+const routerTable3 = require(`./routes/${table3}`);
 app.use(`/${table1}`, routerTable1);
 app.use(`/${table2}`, routerTable2);
-
-/*
-const getAllSeries = require('./routes/series');
-const getAllUsers = require('./routes/users');
-
-app.use('/series', getAllSeries);
-app.use('/users', getAllUsers); */
+app.use(`/${table3}`, routerTable3);
 
 app.listen(port, () => {
     console.log(serverLog);
