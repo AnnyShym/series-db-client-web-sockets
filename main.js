@@ -33,11 +33,15 @@ const internalErrorMessage = 'Oops, some internal issues occured... Please, try 
 const serverLog = `Server started on port ${port}.`;
 const connectionLog = 'MySql database was connected.';
 
-// Some information for UI
-const upCaseDataBase = databaseName[0].toUpperCase() + databaseName.slice(1);
+// Tables
 const table1 = 'series';
 const table2 = 'users';
 const table3 = 'actors';
+const table4 = 'actorsinseries';
+const table4Alt = 'Actors In Series';
+
+// Some information for UI
+const upCaseDataBase = databaseName[0].toUpperCase() + databaseName.slice(1);
 const opInsert = 'Insert';
 const opUpdate = 'Update';
 
@@ -129,15 +133,18 @@ global.internalErrorMessage = internalErrorMessage;
 
 app.get('/', function(req, res) {
     res.status(OK).render(indexRoute, {database: upCaseDataBase,
-        table1: table1, table2: table2, table3: table3});
+        table1: table1, table2: table2, table3: table3, table4: table4,
+        table4Alt: table4Alt});
 });
 
 const routerTable1 = require(`./routes/${table1}`);
 const routerTable2 = require(`./routes/${table2}`);
 const routerTable3 = require(`./routes/${table3}`);
+const routerTable4 = require(`./routes/${table4}`);
 app.use(`/${table1}`, routerTable1);
 app.use(`/${table2}`, routerTable2);
 app.use(`/${table3}`, routerTable3);
+app.use(`/${table4}`, routerTable4);
 
 app.listen(port, () => {
     console.log(serverLog);

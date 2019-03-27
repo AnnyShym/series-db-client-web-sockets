@@ -22,6 +22,7 @@ const descriptionMax = 255;
 msgTitleNotEmpty = "Title is required!";
 msgTitleMax = `Title must contain not more than ${titleMax} symbols!`;
 msgTitleAsciiOnly = 'Title may contain only ASCII symbols!';
+
 msgDescriptionMax = `Description must contain not more than ${descriptionMax} symbols!`;
 msgDescriptionAsciiOnly = 'Description may contain only ASCII symbols!';
 
@@ -40,7 +41,8 @@ router.post('/insert', urlencodedParser, function(req, res) {
 
   res.status(OK).render(changeRoute, {database: upCaseDataBase,
       table: table, columns: columns, upCaseColumns: upCaseColumns,
-      operation: operation, ratingOptions: ratingOptions, countries: countries, rows: null, errors: null});
+      operation: operation, ratingOptions: ratingOptions, countries: countries,
+      rows: null, errors: null});
 
 });
 
@@ -57,7 +59,8 @@ router.post('/update/:id', urlencodedParser, function(req, res) {
       else {
           res.status(OK).render(changeRoute, {database: upCaseDataBase,
               table: table, columns: columns, upCaseColumns: upCaseColumns,
-              operation: operation, ratingOptions: ratingOptions, countries: countries, rows: rows, errors: null});
+              operation: operation, ratingOptions: ratingOptions,
+              countries: countries, rows: rows, errors: null});
       }
   });
 
@@ -90,7 +93,8 @@ router.post('/save', urlencodedParser, function(req, res) {
         res.status(BAD_REQUEST).render(changeRoute, {
             database: upCaseDataBase, table: table,
             columns: columns, upCaseColumns: upCaseColumns,
-            operation: operation, ratingOptions: ratingOptions, countries: countries, rows: null, errors: errors});
+            operation: operation, ratingOptions: ratingOptions,
+            countries: countries, rows: null, errors: errors});
     }
     else {
 
@@ -126,7 +130,8 @@ router.use('/', urlencodedParser, function(req, res) {
         }
         else {
             res.status(OK).render(tableRoute, {database: upCaseDataBase,
-                table: table, columns: columns, upCaseColumns: upCaseColumns, rows: rows});
+                table: table, columns: columns, upCaseColumns: upCaseColumns,
+                rows: rows});
         }
     });
 });

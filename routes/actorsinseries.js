@@ -1,33 +1,25 @@
 const express = require('express');
+
 const router = express.Router();
 
 // Some information for queries
-const table = 'users';
+const table = 'actorsinseries';
 
 // Some information for UI
-const columns = ['#', 'login', 'password'];
-const upCaseColumns = ['#', 'Login', 'Password'];
+const columns = ['id', 'id_series', 'id_actors'];
+const upCaseColumns = ['#', '# Series', '# Actors'];
 
 // Some information for routing
-const changeRoute = 'change/users';
-
-// Some validation information
-const loginMax = 50;
-const passwordMin = 8;
-const passwordMax = 20;
+const changeRoute = 'change/actorsinseries';
 
 // Some validation messages
-const msgLoginIncorrect = 'Login should be a valid email!';
-const msgLoginMax = `Login must contain not more than ${loginMax} symbols!`;
+const msgIdSeriesNotEmpty = 'Series id required!';
+const msgIdSeriesInt = 'Series id must be a number!';
 
-const msgPasswordMin = `Password must contain at least ${passwordMin} symbols!`;
-const msgPasswordMax = `Password must contain not more than ${passwordMax} symbols!`;
-const msgPasswordAsciiOnly = 'Password may contain only ASCII symbols!';
-const msgPasswordDigits = 'Password must contain at least 1 digital!';
-const msgPasswordLowLatin = 'Password must contain at least 1 latin lowercase letter!';
-const msgPasswordUpLatin = 'Password must contain at least 1 latin uppercase letter!';
+const msgIdActorsNotEmpty = 'Actors id required!';
+const msgIdActorsInt = 'Actors id must be a number!';
 
-router.post('/delete/:id', urlencodedParser, function(req, res) {
+router.post('/delete/:id', function(req, res) {
     const statusCode = deleteRow(table, `id = ${req.params.id}`)
     res.status(statusCode).redirect(`/${table}`);
 });
@@ -67,24 +59,22 @@ router.post('/update/:id', urlencodedParser, function(req, res) {
 
 function validateRequest(req) {
 
-  req.check('login')
+  req.check('id_series')
       .trim()
-      .isEmail().withMessage(msgLoginIncorrect)
-      .isLength({ max: loginMax }).withMessage(msgLoginMax)
+      .notEmpty().withMessage(msgIdSeriesNotEmpty)
+      .isInt().withMessage(msgIdSeriesInt);
 
-  req.check('password')
-      .isLength({ min: passwordMin }).withMessage(msgPasswordMin)
-      .isLength({ max: passwordMax }).withMessage(msgPasswordMax)
-      .isAscii().withMessage(msgPasswordAsciiOnly)
-      .matches('[0-9]').withMessage(msgPasswordDigits)
-      .matches('[a-z]').withMessage(msgPasswordLowLatin)
-      .matches('[A-Z]').withMessage(msgPasswordUpLatin);
+      req.check('id_actors')
+          .trim()
+          .notEmpty().withMessage(msgIdActorsNotEmpty)
+          .isInt().withMessage(msgIdActorsInt);
 
   return req.validationErrors();
 
 }
 
 router.post('/save', urlencodedParser, function(req, res) {
+
     const errors = validateRequest(req);
     if (errors) {
         res.status(BAD_REQUEST).render(changeRoute, {
@@ -94,8 +84,8 @@ router.post('/save', urlencodedParser, function(req, res) {
     }
     else {
 
-        const newValues = `login = "${req.body.login}
-            ", password = "${req.body.password}"`;
+        const newValues = `id_series = "${req.body.id_series}
+            ", id_actors = "${req.body.id_actors}"`;
         let statusCode = 0;
         if (operation == opInsert) {
             statusCode = insertRow(table, newValues);
@@ -107,6 +97,7 @@ router.post('/save', urlencodedParser, function(req, res) {
         res.status(statusCode).redirect('.');
 
     }
+
 });
 
 router.use('/', urlencodedParser, function(req, res) {
@@ -117,8 +108,7 @@ router.use('/', urlencodedParser, function(req, res) {
         }
         else {
             res.status(OK).render(tableRoute, {database: upCaseDataBase,
-                table: table, columns: columns, upCaseColumns: upCaseColumns,
-                rows: rows});
+                table: table, columns: columns, upCaseColumns: upCaseColumns, rows: rows});
         }
     });
 });

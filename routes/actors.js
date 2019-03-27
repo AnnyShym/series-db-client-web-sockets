@@ -60,7 +60,8 @@ router.post('/update/:id', urlencodedParser, function(req, res) {
       else {
           res.status(OK).render(changeRoute, {database: upCaseDataBase,
               table: table, columns: columns, upCaseColumns: upCaseColumns,
-              operation: operation, countries: countries, rows: rows, errors: null});
+              operation: operation, countries: countries, rows: rows,
+              errors: null});
       }
   });
 
@@ -72,7 +73,8 @@ function validateRequest(req) {
       .trim()
       .notEmpty().withMessage(msgNameNotEmpty)
       .isLength({ max: nameMax }).withMessage(msgNameMax)
-      .matches(/^[A-Za-z]+('[A-Za-z]+)?(-|\s)?[A-Za-z]+('[A-Za-z]+)?$/, 'i').withMessage(msgNamePattern);
+      .matches(/^[A-Za-z]+('[A-Za-z]+)?(-|\s)?[A-Za-z]+('[A-Za-z]+)?$/, 'i')
+      .withMessage(msgNamePattern);
 
   req.check('middle_name')
       .trim()
@@ -80,19 +82,16 @@ function validateRequest(req) {
 
   if (req.body.middle_name != '') {
       req.check('middle_name')
-      .matches(/^[A-Za-z]+('[A-Za-z]+)?(-|\s)?[A-Za-z]+('[A-Za-z]+)?$/, 'i').withMessage(msgMiddleNamePattern);
+      .matches(/^[A-Za-z]+('[A-Za-z]+)?(-|\s)?[A-Za-z]+('[A-Za-z]+)?$/, 'i')
+      .withMessage(msgMiddleNamePattern);
   }
 
   req.check('last_name')
       .trim()
       .notEmpty().withMessage(msgLastNameNotEmpty)
       .isLength({ max: nameMax }).withMessage(msgLastNameMax)
-      .matches(/^[A-Za-z]+('[A-Za-z]+)?(-|\s)?[A-Za-z]+('[A-Za-z]+)?(\,\s[A-Za-z]+\.)?$/, 'i').withMessage(msgLastNamePattern);
-
-  // if (req.body.date_of_birth != '') {
-  //     req.check('date_of_birth')
-  //         .matches(/^(19|20)\d\d-((0[1-9]|1[012])-(0[1-9]|[12]\d)|(0[13-9]|1[012])-30|(0[13578]|1[02])-31)$/, 'i').withMessage(msgDateOfBirthPattern);
-  // }
+      .matches(/^[A-Za-z]+('[A-Za-z]+)?(-|\s)?[A-Za-z]+('[A-Za-z]+)?(\,\s[A-Za-z]+\.)?$/, 'i')
+      .withMessage(msgLastNamePattern);
 
   return req.validationErrors();
 
@@ -104,7 +103,8 @@ router.post('/save', urlencodedParser, function(req, res) {
         res.status(BAD_REQUEST).render(changeRoute, {
             database: upCaseDataBase, table: table,
             columns: columns, upCaseColumns: upCaseColumns,
-            operation: operation, countries: countries, rows: null, errors: errors});
+            operation: operation, countries: countries, rows: null,
+            errors: errors});
     }
     else {
 
@@ -113,8 +113,8 @@ router.post('/save', urlencodedParser, function(req, res) {
         }
 
         const newValues = `name = "${req.body.name}
-            ", middle_name = "${req.body.middle_name}", last_name = "${req.body.last_name}
-            ", citizenship = ${req.body.citizenship}`;
+            ", middle_name = "${req.body.middle_name}", last_name = "
+            ${req.body.last_name}", citizenship = ${req.body.citizenship}`;
         let statusCode = 0;
         if (operation == opInsert) {
             statusCode = insertRow(table, newValues);
@@ -136,7 +136,8 @@ router.use('/', urlencodedParser, function(req, res) {
         }
         else {
             res.status(OK).render(tableRoute, {database: upCaseDataBase,
-                table: table, columns: columns, upCaseColumns: upCaseColumns, rows: rows});
+                table: table, columns: columns, upCaseColumns: upCaseColumns,
+                rows: rows});
         }
     });
 });
