@@ -26,12 +26,14 @@
 						<th scope="row"><%= row.id %></th>
 						<%- include(`partials/${table}`, {row: row}); -%>
 			      <td styl>
-							<form method="post" action="/<%= table %>/update/<%= row.id %>" align="right">
-								<button type="submit" name="update" class="btn btn-success">Update</button>
-							</form>
-							<form method="post" action="/<%= table %>/delete/<%= row.id %>" align="right">
-								<button type="submit" name="delete" class="btn btn-danger">Delete</button>
-							</form>
+							<div class="btn-group-vertical">
+								<form method="post" action="/<%= table %>/update/<%= row.id %>" align="right">
+									<button type="submit" name="update" class="btn btn-success">Update</button>
+								</form>
+								<form method="post" action="/<%= table %>/delete/<%= row.id %>" align="right">
+									<button type="submit" name="delete" class="btn btn-danger">Delete</button>
+								</form>
+							</div>
 						</td>
 			    </tr>
 				<% }); %>

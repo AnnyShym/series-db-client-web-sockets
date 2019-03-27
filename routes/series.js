@@ -52,7 +52,7 @@ router.post('/update/:id', urlencodedParser, function(req, res) {
   const sql = `SELECT * FROM ${table} WHERE id = ${id};`;
   const query = db.query(sql, (err, rows) => {
       if (err) {
-          req.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
+          res.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
       }
       else {
           res.status(OK).render(changeRoute, {database: upCaseDataBase,
@@ -122,7 +122,7 @@ router.use('/', urlencodedParser, function(req, res) {
     const sql = `SELECT * FROM ${table} ORDER BY title ASC, rating DESC;`;
     const query = db.query(sql, (err, rows) => {
         if (err) {
-            req.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
+            res.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
         }
         else {
             res.status(OK).render(tableRoute, {database: upCaseDataBase,

@@ -2,23 +2,22 @@ const express = require('express');
 const mysql = require('mysql');
 const bodyParser = require('body-parser');
 var expressValidator = require('express-validator');
+const fs = require('fs');
 
 var app = express();
 app.set('view engine', 'ejs');
 const urlencodedParser = bodyParser.urlencoded({ extended: false });
 
 // Some server info
-const port = 3000;
+const port = 8080;
 
 // Some data to create a connection to the database
-const host = 'localhost';
-const user = 'root';
-const password = '';
 const databaseName = 'series';
 
 // Some information for routing
 const indexRoute = 'index';
 const tableRoute = 'table';
+const db_location = './public/create_tables.sql';
 
 // Status codes
 const OK = 200;
@@ -42,12 +41,8 @@ const table3 = 'actors';
 const opInsert = 'Insert';
 const opUpdate = 'Update';
 
-var db = mysql.createConnection({
-    host     : host,
-    user     : user,
-    password : password,
-    database : databaseName
-});
+const connectionString = 'mysql://root:root@192.168.99.100:3307/series_db?charset=utf8_general_ci&timezone=-0700';
+var db = mysql.createConnection(connectionString);
 
 db.connect((err) => {
     if (err) {
@@ -55,6 +50,16 @@ db.connect((err) => {
     }
     console.log(connectionLog);
 });
+
+const sqlFile = fs.readFileSync(db_location).toString();
+const arrSql = sqlFile.split('\r\n\r\n');
+for (let i in arrSql) {
+    const query = db.query(arrSql[i], (err, results) => {
+        if (err) {
+            throw(err);
+        }
+    });
+}
 
 app.use(expressValidator({
     errorFormatter: function(param, msg, value) {

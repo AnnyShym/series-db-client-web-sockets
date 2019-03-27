@@ -42,7 +42,7 @@ router.post('/insert', urlencodedParser, function(req, res) {
 
   res.status(OK).render(changeRoute, {database: upCaseDataBase,
       table: table, columns: columns, upCaseColumns: upCaseColumns,
-      operation: operation, rows: null, validationErrors: null, uniquenessError: null});
+      operation: operation, rows: null, errors: null});
 
 });
 
@@ -54,12 +54,12 @@ router.post('/update/:id', urlencodedParser, function(req, res) {
   const sql = `SELECT * FROM ${table} WHERE id = ${id};`;
   const query = db.query(sql, (err, rows) => {
       if (err) {
-          req.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
+          res.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
       }
       else {
           res.status(OK).render(changeRoute, {database: upCaseDataBase,
               table: table, columns: columns, upCaseColumns: upCaseColumns,
-              operation: operation, rows: rows, validationErrors: null, uniquenessError: null});
+              operation: operation, rows: rows, errors: null});
       }
   });
 
@@ -80,37 +80,17 @@ function validateRequest(req) {
       .matches('[a-z]').withMessage(msgPasswordLowLatin)
       .matches('[A-Z]').withMessage(msgPasswordUpLatin);
 
-  var uniquenessError = null;
-  const sql = `SELECT * FROM ${table};`;
-  const query = db.query(sql, (err, rows) => {
-      if (err) {
-          req.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
-      }
-      else {
-          for (let i = 0; i < rows.length; i++) {
-              if (rows[i].login.trim() == req.body.login) {
-                  uniquenessError = {param: 'login',
-                      msg: msgUniqueness,
-                      value: req.body.login};
-                  break;
-              }
-          }
-      }
-  });
-
-  return {validationErrors: req.validationErrors(), uniquenessError: uniquenessError};
+  return req.validationErrors();
 
 }
 
 router.post('/save', urlencodedParser, function(req, res) {
     const errors = validateRequest(req);
-    const validationErrors = errors.validationErrors;
-    const uniquenessError = errors.uniquenessError;
-    if (validationErrors || uniquenessError) {
+    if (errors) {
         res.status(BAD_REQUEST).render(changeRoute, {
             database: upCaseDataBase, table: table,
             columns: columns, upCaseColumns: upCaseColumns,
-            operation: operation, rows: null, validationErrors: validationErrors, uniquenessError: uniquenessError});
+            operation: operation, rows: null, errors: errors});
     }
     else {
 
@@ -133,7 +113,7 @@ router.use('/', urlencodedParser, function(req, res) {
     const sql = `SELECT * FROM ${table} ORDER BY id ASC;`;
     const query = db.query(sql, (err, rows) => {
         if (err) {
-            req.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
+            res.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
         }
         else {
             res.status(OK).render(tableRoute, {database: upCaseDataBase,

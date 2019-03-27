@@ -13,38 +13,38 @@
 	<body>
 		<% if (errors) { %>
 			<% for (let i = 0; i < errors.length; i++) { %>
-				<div class="alert alert-danger"><%= errors[i].msg %></div>
+				<div class="container">
+					<div class="alert alert-danger"><%= errors[i].msg %></div>
+				</div>
 			<% } %>
 		<% } %>
-    <form method="post" action="/<%= table %>/save" align="center">
-      <div class="form-group">
-        <label for="exampleFormControlInput1"><%= upCaseColumns[1] %>:</label>
-        <input type="text" name="<%= columns[1] %>" <% if (rows && rows[0].name) { %> value="<%= rows[0].name.trim() %>" <% } %> class="form-control" id="exampleFormControlInput1" required>
-      </div>
-      <div class="form-group">
-        <label for="exampleFormControlInput1"><%= upCaseColumns[2] %>:</label>
-        <input type="text" name="<%= columns[2] %>" <% if (rows && rows[0].middle_name) { %> value="<%= rows[0].middle_name.trim() %>" <% } %> class="form-control" id="exampleFormControlInput1">
-      </div>
-      <div class="form-group">
-        <label for="exampleFormControlInput1"><%= upCaseColumns[3] %>:</label>
-        <input type="text" name="<%= columns[3] %>" <% if (rows && rows[0].last_name) { %> value="<%= rows[0].last_name.trim() %>" <% } %> class="form-control" id="exampleFormControlInput1" required>
-      </div>
-      <div class="form-group">
-        <label for="exampleFormControlInput1"><%= upCaseColumns[4] %>:</label>
-				<select name="<%= columns[4] %>" class="form-control" id="exampleFormControlSelect1">
-					<% for (let i = 0; i < countries.length; i++) { %>
-						<% if (rows && countries[i] == rows[0].citizenship) { %>
-							<option selected value="<%= countries[i] %>"><%= countries[i] %></option>
-						<% } else { %>
-							<option value="<%= countries[i] %>"><%= countries[i] %></option>
+		<div class="container">
+	    <form method="post" action="/<%= table %>/save" align="center">
+	      <div class="form-group">
+	        <label for="exampleFormControlInput1"><%= upCaseColumns[1] %>:</label>
+	        <input type="text" name="<%= columns[1] %>" <% if (rows && rows[0].name) { %> value="<%= rows[0].name.trim() %>" <% } %> class="form-control" id="exampleFormControlInput1" required>
+	      </div>
+	      <div class="form-group">
+	        <label for="exampleFormControlInput1"><%= upCaseColumns[2] %>:</label>
+	        <input type="text" name="<%= columns[2] %>" <% if (rows && rows[0].middle_name) { %> value="<%= rows[0].middle_name.trim() %>" <% } %> class="form-control" id="exampleFormControlInput1">
+	      </div>
+	      <div class="form-group">
+	        <label for="exampleFormControlInput1"><%= upCaseColumns[3] %>:</label>
+	        <input type="text" name="<%= columns[3] %>" <% if (rows && rows[0].last_name) { %> value="<%= rows[0].last_name.trim() %>" <% } %> class="form-control" id="exampleFormControlInput1" required>
+	      </div>
+	      <div class="form-group">
+	        <label for="exampleFormControlInput1"><%= upCaseColumns[4] %>:</label>
+					<select name="<%= columns[4] %>" class="form-control" id="exampleFormControlSelect1">
+						<% for (let i = 0; i < countries.length; i++) { %>
+							<% if (rows && countries[i] == rows[0].citizenship) { %>
+								<option selected value="<%= countries[i] %>"><%= countries[i] %></option>
+							<% } else { %>
+								<option value="<%= countries[i] %>"><%= countries[i] %></option>
+							<% } %>
 						<% } %>
-					<% } %>
-				</select>
-      </div>
-      <div class="form-group">
-        <label for="exampleFormControlInput1"><%= upCaseColumns[5] %>:</label>
-        <input type="date" name="<%= columns[5] %>" <% if (rows && rows[0].date_of_birth) { %> value="<%= rows[0].date_of_birth %>" <% } %> class="form-control" id="exampleFormControlInput1">
-      </div>
-      <button type="submit" name="<%= operation %>" class="btn btn-success" align="center"><%= operation %></button>
-    </form>
+					</select>
+	      </div>
+	      <button type="submit" name="<%= operation %>" class="btn btn-success" align="center"><%= operation %></button>
+	    </form>
+		</div>
 	</body>

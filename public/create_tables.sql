@@ -1,16 +1,3 @@
-
-// create database
-
-CREATE TABLE IF NOT EXISTS `actors` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `name` varchar(50) NOT NULL,
-  `middle_name` varchar(50) DEFAULT NULL,
-  `last_name` varchar(50) NOT NULL,
-  `citizenship` varchar(50) DEFAULT NULL,
-  `date` date DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
 CREATE TABLE IF NOT EXISTS `series` (
   `title` varchar(50) NOT NULL,
   `country` varchar(50) DEFAULT NULL,
@@ -32,18 +19,26 @@ CREATE TABLE IF NOT EXISTS `users` (
   UNIQUE KEY `login` (`login`)
 ) ENGINE=MyISAM AUTO_INCREMENT=26 DEFAULT CHARSET=latin1;
 
+CREATE TABLE IF NOT EXISTS `actors` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `name` varchar(50) NOT NULL,
+  `middle_name` varchar(50) DEFAULT NULL,
+  `last_name` varchar(50) NOT NULL,
+  `citizenship` varchar(50) DEFAULT NULL,
+  `date` date DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
 DROP TRIGGER IF EXISTS `TRG_Users_OnInsert`;
-DELIMITER $$
+
 CREATE TRIGGER `TRG_Users_OnInsert` BEFORE INSERT ON `users` FOR EACH ROW BEGIN
   SET NEW.password = md5(NEW.password);
 END
-$$
-DELIMITER ;
+
 DROP TRIGGER IF EXISTS `TRG_Users_OnUpdate`;
-DELIMITER $$
+
 CREATE TRIGGER `TRG_Users_OnUpdate` BEFORE UPDATE ON `users` FOR EACH ROW BEGIN
   SET NEW.password = md5(NEW.password);
 END
-$$
-DELIMITER ;
+
 COMMIT;

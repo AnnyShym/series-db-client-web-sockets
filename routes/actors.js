@@ -7,8 +7,8 @@ const router = express.Router();
 const table = 'actors';
 
 // Some information for UI
-const columns = ['#', 'name', 'middle_name', 'last_name', 'citizenship', 'date_of_birth'];
-const upCaseColumns = ['#', 'Name', 'Middle Name', 'Last Name', 'Citizenship', 'Date Of Birth'];
+const columns = ['#', 'name', 'middle_name', 'last_name', 'citizenship'];
+const upCaseColumns = ['#', 'Name', 'Middle Name', 'Last Name', 'Citizenship'];
 
 // Some information for routing
 const changeRoute = 'change/actors';
@@ -27,8 +27,6 @@ msgMiddleNamePattern = 'Invalid middle name!';
 msgLastNameNotEmpty = "Last name is required!";
 msgLastNameMax = `Last name must contain not more than ${nameMax} symbols!`;
 msgLastNamePattern = 'Invalid last name!';
-
-msgDateOfBirthPattern = 'Invalid date!';
 
 router.post('/delete/:id', function(req, res) {
     const statusCode = deleteRow(table, `id = ${req.params.id}`)
@@ -57,10 +55,9 @@ router.post('/update/:id', urlencodedParser, function(req, res) {
   const sql = `SELECT * FROM ${table} WHERE id = ${id};`;
   const query = db.query(sql, (err, rows) => {
       if (err) {
-          req.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
+          res.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
       }
       else {
-            console.log(rows[0].date_of_birth);
           res.status(OK).render(changeRoute, {database: upCaseDataBase,
               table: table, columns: columns, upCaseColumns: upCaseColumns,
               operation: operation, countries: countries, rows: rows, errors: null});
@@ -92,10 +89,10 @@ function validateRequest(req) {
       .isLength({ max: nameMax }).withMessage(msgLastNameMax)
       .matches(/^[A-Za-z]+('[A-Za-z]+)?(-|\s)?[A-Za-z]+('[A-Za-z]+)?(\,\s[A-Za-z]+\.)?$/, 'i').withMessage(msgLastNamePattern);
 
-  if (req.body.date_of_birth != '') {
-      req.check('date_of_birth')
-          .matches(/^(19|20)\d\d-((0[1-9]|1[012])-(0[1-9]|[12]\d)|(0[13-9]|1[012])-30|(0[13578]|1[02])-31)$/, 'i').withMessage(msgDateOfBirthPattern);
-  }
+  // if (req.body.date_of_birth != '') {
+  //     req.check('date_of_birth')
+  //         .matches(/^(19|20)\d\d-((0[1-9]|1[012])-(0[1-9]|[12]\d)|(0[13-9]|1[012])-30|(0[13578]|1[02])-31)$/, 'i').withMessage(msgDateOfBirthPattern);
+  // }
 
   return req.validationErrors();
 
@@ -117,7 +114,7 @@ router.post('/save', urlencodedParser, function(req, res) {
 
         const newValues = `name = "${req.body.name}
             ", middle_name = "${req.body.middle_name}", last_name = "${req.body.last_name}
-            ", citizenship = ${req.body.citizenship}, date_of_birth = "${req.body.date_of_birth}"`;
+            ", citizenship = ${req.body.citizenship}`;
         let statusCode = 0;
         if (operation == opInsert) {
             statusCode = insertRow(table, newValues);
@@ -135,7 +132,7 @@ router.use('/', urlencodedParser, function(req, res) {
     const sql = `SELECT * FROM ${table} ORDER BY name, middle_name, last_name ASC;`;
     const query = db.query(sql, (err, rows) => {
         if (err) {
-            req.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
+            res.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
         }
         else {
             res.status(OK).render(tableRoute, {database: upCaseDataBase,
