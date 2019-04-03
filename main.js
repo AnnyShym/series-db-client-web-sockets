@@ -34,11 +34,9 @@ const serverLog = `Server started on port ${port}.`;
 const connectionLog = 'MySql database was connected.';
 
 // Tables
-const table1 = 'series';
-const table2 = 'users';
-const table3 = 'actors';
-const table4 = 'actorsinseries';
-const table4Alt = 'Actors In Series';
+const tables = ['users', 'series', 'actors', 'actorsinseries'];
+const tablesAlt = [null, null, null, 'Actors In Series']
+const amountTablesPerRow = 3;
 
 // Some information for UI
 const upCaseDataBase = databaseName[0].toUpperCase() + databaseName.slice(1);
@@ -133,8 +131,7 @@ global.internalErrorMessage = internalErrorMessage;
 
 app.get('/', function(req, res) {
     res.status(OK).render(indexRoute, {database: upCaseDataBase,
-        table1: table1, table2: table2, table3: table3, table4: table4,
-        table4Alt: table4Alt});
+        tables: tables, tablesAlt: tablesAlt, amountTablesPerRow: amountTablesPerRow});
 });
 
 const routerTable1 = require(`./routes/${table1}`);
