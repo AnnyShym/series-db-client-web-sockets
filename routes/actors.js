@@ -4,107 +4,71 @@ const countries = require('../modules/countries');
 const router = express.Router();
 
 // Some information for queries
-const table = 'actors';
+const TABLE = 'actors';
 
 // Some information for UI
-const columns = ['#', 'name', 'middle_name', 'last_name', 'citizenship'];
-const upCaseColumns = ['#', 'Name', 'Middle Name', 'Last Name', 'Citizenship'];
-
-// Some information for routing
-const changeRoute = 'change/actors';
+const COLUMNS = ['#', 'name', 'middle_name', 'last_name', 'citizenship'];
 
 // Some validation information
-const nameMax = 50;
+const NAME_MAX = 50;
 
 // Some validation messages
-msgNameNotEmpty = "Name is required!";
-msgNameMax = `Name must contain not more than ${nameMax} symbols!`;
-msgNamePattern = 'Invalid name!';
+MSG_NAME_NOT_EMPTY = "Name is required!";
+MSG_NAME_MAX = `Name must contain not more than ${NAME_MAX} symbols!`;
+MSG_NAME_PATTERN = 'Invalid name!';
 
-msgMiddleNameMax = `Middle name must contain not more than ${nameMax} symbols!`;
-msgMiddleNamePattern = 'Invalid middle name!';
+MSG_MIDDLE_NAME_MAX = `Middle name must contain not more than ${NAME_MAX} symbols!`;
+MSG_MIDDLE_NAME_PATTERN = 'Invalid middle name!';
 
-msgLastNameNotEmpty = "Last name is required!";
-msgLastNameMax = `Last name must contain not more than ${nameMax} symbols!`;
-msgLastNamePattern = 'Invalid last name!';
+MSG_LAST_NAME_NOT_EMPTY = "Last name is required!";
+MSG_LAST_NAME_MAX = `Last name must contain not more than ${NAME_MAX} symbols!`;
+MSG_LAST_NAME_PATTERN = 'Invalid last name!';
+
+router.get('/countries', urlencodedParser, function(req, res) {
+    res.status(OK).json({countries: countries});
+});
 
 router.post('/delete/:id', function(req, res) {
-    const statusCode = deleteRow(table, `id = ${req.params.id}`)
-    res.status(statusCode).redirect(`/${table}`);
-});
-
-var operation = null;
-var id = 0;
-
-router.post('/insert', urlencodedParser, function(req, res) {
-
-  operation = opInsert;
-  id = 0;
-
-  res.status(OK).render(changeRoute, {database: upCaseDataBase,
-      table: table, columns: columns, upCaseColumns: upCaseColumns,
-      operation: operation, countries: countries, rows: null, errors: null});
-
-});
-
-router.post('/update/:id', urlencodedParser, function(req, res) {
-
-  operation = opUpdate;
-  id = req.params.id;
-
-  const sql = `SELECT * FROM ${table} WHERE id = ${id};`;
-  const query = db.query(sql, (err, rows) => {
-      if (err) {
-          res.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
-      }
-      else {
-          res.status(OK).render(changeRoute, {database: upCaseDataBase,
-              table: table, columns: columns, upCaseColumns: upCaseColumns,
-              operation: operation, countries: countries, rows: rows,
-              errors: null});
-      }
-  });
-
+    const sql = `DELETE FROM ${TABLE} WHERE id = ${req.params.id};`;
+    const query = db.query(sql, (err, results) => {
+        err ? res.sendStatus(INTERNAL_SERVER_ERROR) : res.sendStatus(NO_CONTENT);
+    });
 });
 
 function validateRequest(req) {
 
   req.check('name')
       .trim()
-      .notEmpty().withMessage(msgNameNotEmpty)
-      .isLength({ max: nameMax }).withMessage(msgNameMax)
+      .notEmpty().withMessage(MSG_NAME_NOT_EMPTY)
+      .isLength({ max: NAME_MAX }).withMessage(MSG_NAME_MAX)
       .matches(/^[A-Za-z]+('[A-Za-z]+)?(-|\s)?[A-Za-z]+('[A-Za-z]+)?$/, 'i')
-      .withMessage(msgNamePattern);
+      .withMessage(MSG_NAME_PATTERN);
 
   req.check('middle_name')
       .trim()
-      .isLength({ max: nameMax }).withMessage(msgMiddleNameMax)
+      .isLength({ max: NAME_MAX }).withMessage(MSG_MIDDLE_NAME_MAX)
 
   if (req.body.middle_name != '') {
       req.check('middle_name')
       .matches(/^[A-Za-z]+('[A-Za-z]+)?(-|\s)?[A-Za-z]+('[A-Za-z]+)?$/, 'i')
-      .withMessage(msgMiddleNamePattern);
+      .withMessage(MSG_MIDDLE_NAME_PATTERN);
   }
 
   req.check('last_name')
       .trim()
-      .notEmpty().withMessage(msgLastNameNotEmpty)
-      .isLength({ max: nameMax }).withMessage(msgLastNameMax)
+      .notEmpty().withMessage(MSG_LAST_NAME_NOT_EMPTY)
+      .isLength({ max: NAME_MAX }).withMessage(MSG_LAST_NAME_MAX)
       .matches(/^[A-Za-z]+('[A-Za-z]+)?(-|\s)?[A-Za-z]+('[A-Za-z]+)?(\,\s[A-Za-z]+\.)?$/, 'i')
-      .withMessage(msgLastNamePattern);
+      .withMessage(MSG_LAST_NAME_PATTERN);
 
   return req.validationErrors();
 
 }
 
-router.post('/save', urlencodedParser, function(req, res) {
+router.post('/insert', urlencodedParser, function(req, res) {
     const errors = validateRequest(req);
     if (errors) {
-        res.status(BAD_REQUEST).render(changeRoute, {
-            database: upCaseDataBase, table: table,
-            columns: columns, upCaseColumns: upCaseColumns,
-            operation: operation, countries: countries, rows: null,
-            errors: errors});
+        res.status(BAD_REQUEST).json({errors: errors});
     }
     else {
 
@@ -112,32 +76,63 @@ router.post('/save', urlencodedParser, function(req, res) {
             req.body.citizenship = `"${req.body.citizenship}"`;
         }
 
-        const newValues = `name = "${req.body.name}
-            ", middle_name = "${req.body.middle_name}", last_name = "
-            ${req.body.last_name}", citizenship = ${req.body.citizenship}`;
-        let statusCode = 0;
-        if (operation == opInsert) {
-            statusCode = insertRow(table, newValues);
-        }
-        else {
-            statusCode = updateRow(table, newValues, `id = ${id}`);
-        }
+        const newValues = `name = "${req.body.name}", middle_name = "${
+            req.body.middle_name}", last_name = "${
+            req.body.last_name}", citizenship = ${req.body.citizenship}`;
 
-        res.status(statusCode).redirect('.');
+        const sql = `INSERT INTO ${TABLE} SET ${newValues};`;
+        const query = db.query(sql, (err, results) => {
+            err ? res.sendStatus(INTERNAL_SERVER_ERROR) : res.sendStatus(CREATED);
+        });
 
     }
 });
 
+router.post('/update/:id', urlencodedParser, function(req, res) {
+    const errors = validateRequest(req);
+    if (errors) {
+        res.status(BAD_REQUEST).json({errors: errors});
+    }
+    else {
+
+        if (req.body.citizenship != 'NULL') {
+            req.body.citizenship = `"${req.body.citizenship}"`;
+        }
+
+        const newValues = `name = "${req.body.name}", middle_name = "${
+            req.body.middle_name}", last_name = "${
+            req.body.last_name}", citizenship = ${req.body.citizenship}`;
+
+        // const statusCode = updateRow(TABLE, newValues, `id = ${req.props.id}`);
+
+        const sql = `UPDATE ${TABLE} SET ${newValues} WHERE id = ${req.params.id};`;
+        const query = db.query(sql, (err, results) => {
+            err ? res.sendStatus(INTERNAL_SERVER_ERROR) : res.sendStatus(NO_CONTENT);
+        });
+
+    }
+});
+
+router.get('/:id', urlencodedParser, function(req, res) {
+  const sql = `SELECT * FROM ${TABLE} WHERE id = ${req.params.id};`;
+  const query = db.query(sql, (err, row) => {
+      if (err) {
+          res.status(INTERNAL_SERVER_ERROR).send(INTERNAL_ERROR_MSG);
+      }
+      else {
+          res.status(OK).json({actor: row});
+      }
+  });
+});
+
 router.use('/', urlencodedParser, function(req, res) {
-    const sql = `SELECT * FROM ${table} ORDER BY name, middle_name, last_name ASC;`;
+    const sql = `SELECT * FROM ${TABLE} ORDER BY name, middle_name, last_name ASC;`;
     const query = db.query(sql, (err, rows) => {
         if (err) {
-            res.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
+            res.status(INTERNAL_SERVER_ERROR).send(INTERNAL_ERROR_MSG);
         }
         else {
-            res.status(OK).render(tableRoute, {database: upCaseDataBase,
-                table: table, columns: columns, upCaseColumns: upCaseColumns,
-                rows: rows});
+            res.status(OK).json({rows: rows});
         }
     });
 });
