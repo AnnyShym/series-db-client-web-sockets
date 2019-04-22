@@ -2,23 +2,22 @@ import React, { Component } from 'react';
 import { Redirect } from 'react-router-dom';
 import axios from 'axios';
 
-class ChangeActor extends Component {
+class ChangeActorsInSeries extends Component {
 
     constructor(props) {
 
         super(props);
 
         this.state = {
-            table: 'actors',
+            table: 'actorsinseries',
             route: 'http://localhost:8080/',
-            columns: ['id', 'name', 'middle_name', 'last_name', 'citizenship'],
-            columnsAlt: ['#', 'Name', 'Middle Name', 'Last Name', 'Citizenship'],
-            countries: [],
-            actor: {
-                name: '',
-                middle_name: '',
-                last_name: '',
-                citizenship: 'NULL'
+            columns: ['id', 'id_series', 'id_actors'],
+            columnsAlt: ['#', '# Series', '# Actor'],
+            seriesInfo: [],
+            actorsInfo: [],
+            actorsinseries: {
+                id_series: 'NULL',
+                id_actors: 'NULL'
             },
             changed: false,
             errors: []
@@ -32,10 +31,8 @@ class ChangeActor extends Component {
         this.opInsert = 'insert';
         this.opUpdate = 'update';
 
-        this.onChangeName= this.onChangeName.bind(this);
-        this.onChangeMiddleName = this.onChangeMiddleName.bind(this);
-        this.onChangeLastName = this.onChangeLastName.bind(this);
-        this.onChangeCitizenship = this.onChangeCitizenship.bind(this);
+        this.onChangeSeriesId= this.onChangeSeriesId.bind(this);
+        this.onChangeActorsId = this.onChangeActorsId.bind(this);
 
         this.onSubmit = this.onSubmit.bind(this);
 
@@ -43,30 +40,20 @@ class ChangeActor extends Component {
 
     componentDidMount() {
 
-        this.getCountries();
+        this.getSeriesInfo();
+        this.getActorsInfo();
 
         if (this.props.match.params.operation === this.opUpdate) {
-            this.getActorInfo();
+            this.getActorsInSeriesInfo();
         }
 
     }
 
-    getCountries() {
-        axios.get(`${this.state.route}${this.state.table}/countries`)
+    getSeriesInfo() {
+        axios.get(`${this.state.route}${this.state.table}/seriesinfo`)
         .then(response => {
             this.setState({
-                countries: response.data.countries
-            })
-        })
-        .catch(err => console.log(err))
-    }
-
-    getActorInfo() {
-        axios.get(`${this.state.route}${this.state.table}/${
-            this.props.match.params.id}`)
-        .then(response => {
-            this.setState({
-                actor: response.data.row[0],
+                seriesInfo: response.data.rows,
                 errors: []
             })
         })
@@ -81,52 +68,70 @@ class ChangeActor extends Component {
         })
     }
 
-    onChangeName(e) {
+    getActorsInfo() {
+        axios.get(`${this.state.route}${this.state.table}/actorsinfo`)
+        .then(response => {
+            this.setState({
+                actorsInfo: response.data.rows,
+                errors: []
+            })
+        })
+        .catch(err => {
+            console.log(err);
+            if (err.response && err.response.status ===
+                this.statusCodes.INTERNAL_SERVER_ERROR) {
+                this.setState({
+                    errors: err.response.data.errors,
+                });
+            }
+        })
+    }
+
+    getActorsInSeriesInfo() {
+        axios.get(`${this.state.route}${this.state.table}/${
+            this.props.match.params.id}`)
+        .then(response => {
+            this.setState({
+                actorsinseries: response.data.row[0],
+                errors: []
+            })
+        })
+        .catch(err => {
+            console.log(err);
+            if (err.response && err.response.status ===
+                this.statusCodes.INTERNAL_SERVER_ERROR) {
+                this.setState({
+                    errors: err.response.data.errors,
+                });
+            }
+        })
+    }
+
+    onChangeSeriesId(e) {
         this.setState({
-            actor : {
-                ...this.state.actor,
-                name: e.target.value
+            actorsinseries : {
+                ...this.state.actorsinseries,
+                id_series: e.target[e.target.selectedIndex].value
             }
         });
     }
 
-    onChangeMiddleName(e) {
+    onChangeActorsId(e) {
         this.setState({
-            actor: {
-                ...this.state.actor,
-                middle_name: e.target.value
+            actorsinseries: {
+                ...this.state.actorsinseries,
+                id_actors: e.target[e.target.selectedIndex].value
             }
         });
     }
-
-    onChangeLastName(e) {
-        this.setState({
-            actor: {
-                ...this.state.actor,
-                last_name: e.target.value
-            }
-        });
-    }
-
-    onChangeCitizenship(e) {
-        this.setState({
-            actor: {
-                ...this.state.actor,
-                citizenship: e.target[e.target.selectedIndex].value
-            }
-        });
-    }
-
 
     onSubmit(e) {
 
         e.preventDefault();
 
         const obj = {
-            name: this.state.actor.name,
-            middle_name: this.state.actor.middle_name,
-            last_name: this.state.actor.last_name,
-            citizenship: this.state.actor.citizenship,
+            id_series: this.state.actorsinseries.id_series,
+            id_actors: this.state.actorsinseries.id_actors,
         };
 
         let route = null;
@@ -149,8 +154,7 @@ class ChangeActor extends Component {
             .catch(err => {
                 console.log(err);
                 if (err.response && (err.response.status ===
-                    this.statusCodes.INTERNAL_SERVER_ERROR ||
-                    err.response.status === this.statusCodes.BAD_REQUEST)) {
+                    this.statusCodes.INTERNAL_SERVER_ERROR)) {
                         this.setState({
                             errors: err.response.data.errors,
                             changed: false
@@ -181,8 +185,12 @@ class ChangeActor extends Component {
             );
         }
 
-        const countryOptions = this.state.countries.map((country) =>
-            <option key={ country } value={ country }>{ country }</option>
+        const seriesOptions = this.state.seriesInfo.map((series) =>
+            <option key={ series.id } value={ series.id }>{ `${series.id} (${series.title})` }</option>
+        );
+
+        const actorsOptions = this.state.actorsInfo.map((actor) =>
+            <option key={ actor.id } value={ actor.id }>{ `${actor.id} (${actor.name} ${actor.last_name})` }</option>
         );
 
         const operationAlt = this.props.match.params.operation[0].toUpperCase() +
@@ -198,20 +206,16 @@ class ChangeActor extends Component {
                     <form method="post" onSubmit={ this.onSubmit } align="center">
                         <div className="form-group">
                             <label htmlFor="exampleFormControlInput1">{ this.state.columnsAlt[1] }:</label>
-                            <input type="text" name={ this.state.columns[1] } value={ this.state.actor.name } onChange= { this.onChangeName } className="form-control" id="exampleFormControlInput1" required />
+                            <select name={ this.state.columns[1] } value={ this.state.actorsinseries.id_series } onChange= { this.onChangeSeriesId } className="form-control" id="exampleFormControlSelect1">
+                                <option key={ 'NULL' } value='NULL'></option>
+                                { seriesOptions }
+                            </select>
                         </div>
                         <div className="form-group">
                             <label htmlFor="exampleFormControlInput2">{ this.state.columnsAlt[2] }:</label>
-                            <input type="text" name={ this.state.columns[2] } value={ this.state.actor.middle_name } onChange= { this.onChangeMiddleName } className="form-control" id="exampleFormControlInput2" />
-                        </div>
-                        <div className="form-group">
-                            <label htmlFor="exampleFormControlInput3">{ this.state.columnsAlt[3] }:</label>
-                            <input type="text" name={ this.state.columns[3] } value={ this.state.actor.last_name } onChange= { this.onChangeLastName } className="form-control" id="exampleFormControlInput3" required />
-                        </div>
-                        <div className="form-group">
-                            <label htmlFor="exampleFormControlInput4">{ this.state.columnsAlt[4] }:</label>
-                            <select name={ this.state.columns[4] } value={ this.state.actor.citizenship } onChange= { this.onChangeCitizenship } className="form-control" id="exampleFormControlSelect1">
-                                { countryOptions }
+                            <select name={ this.state.columns[2] } value={ this.state.actorsinseries.id_actors } onChange= { this.onChangeActorsId } className="form-control" id="exampleFormControlSelect2">
+                                <option key={ 'NULL' } value='NULL'></option>
+                                { actorsOptions }
                             </select>
                         </div>
                         <button type="submit" name={ operationAlt } className="btn btn-success" align="center">{ operationAlt }</button>
@@ -223,4 +227,4 @@ class ChangeActor extends Component {
     }
 }
 
-export default ChangeActor;
+export default ChangeActorsInSeries;

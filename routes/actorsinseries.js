@@ -1,114 +1,113 @@
 const express = require('express');
-
 const router = express.Router();
 
 // Some information for queries
-const table = 'actorsinseries';
+const TABLE = 'actorsinseries';
+const SERIES_TABLE = 'series';
+const ACTORS_TABLE = 'actors';
+const ORDER_BY_ID_SERIES = 'ORDER BY id ASC';
+const ORDER_BY_ID_ACTORS = 'ORDER BY id ASC';
 
 // Some information for UI
-const columns = ['id', 'id_series', 'id_actors'];
-const upCaseColumns = ['#', '# Series', '# Actors'];
+const COLUMNS = ['id', 'id_series', 'id_actors'];
 
-// Some information for routing
-const changeRoute = 'change/actorsinseries';
-
-// Some validation messages
-const msgIdSeriesNotEmpty = 'Series id required!';
-const msgIdSeriesInt = 'Series id must be a number!';
-
-const msgIdActorsNotEmpty = 'Actors id required!';
-const msgIdActorsInt = 'Actors id must be a number!';
-
-router.post('/delete/:id', function(req, res) {
-    const statusCode = deleteRow(table, `id = ${req.params.id}`)
-    res.status(statusCode).redirect(`/${table}`);
+router.get('/seriesinfo', function(req, res) {
+    selectPartialInfo(SERIES_TABLE, 'id, title', ORDER_BY_ID_SERIES,
+        function (err, statusCode, rows) {
+        if (err) {
+            console.log(err);
+            res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
+        }
+        else {
+            res.status(statusCode).json({rows: rows});
+        }
+    });
 });
 
-var operation = null;
-var id = 0;
+router.get('/actorsinfo', function(req, res) {
+    selectPartialInfo(ACTORS_TABLE, 'id, name, last_name', ORDER_BY_ID_ACTORS,
+    function (err, statusCode, rows) {
+        if (err) {
+            console.log(err);
+            res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
+        }
+        else {
+            res.status(statusCode).json({rows: rows});
+        }
+    });
+});
+
+router.post('/delete/:id', function(req, res) {
+    deleteRow(TABLE, `id = ${req.params.id}`, function (err, statusCode) {
+        if (err) {
+            console.log(err);
+            res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
+        }
+        else {
+            res.sendStatus(statusCode);
+        }
+    });
+});
 
 router.post('/insert', urlencodedParser, function(req, res) {
 
-  operation = opInsert;
-  id = 0;
+    const newValues = `id_series = "${
+        req.body.id_series}", id_actors = "${req.body.id_actors}"`;
 
-  res.status(OK).render(changeRoute, {database: upCaseDataBase,
-      table: table, columns: columns, upCaseColumns: upCaseColumns,
-      operation: operation, rows: null, errors: null});
+    insertRow(TABLE, newValues, function (err, statusCode) {
+        if (err) {
+            console.log(err);
+            res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
+        }
+        else {
+            res.sendStatus(statusCode);
+        }
+    });
 
 });
 
 router.post('/update/:id', urlencodedParser, function(req, res) {
 
-  operation = opUpdate;
-  id = req.params.id;
+    const newValues = `id_series = "${
+        req.body.id_series}", id_actors = "${req.body.id_actors}"`;
 
-  const sql = `SELECT * FROM ${table} WHERE id = ${id};`;
-  const query = db.query(sql, (err, rows) => {
+    updateRow(TABLE, newValues, `id = ${req.params.id}`,
+        function (err, statusCode) {
+        if (err) {
+            console.log(err);
+            res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
+        }
+        else {
+            res.sendStatus(statusCode);
+        }
+    });
+
+});
+
+router.get('/:id', function(req, res) {
+  selectRow(TABLE, `id = ${req.params.id}`, function (err, statusCode, row) {
       if (err) {
-          res.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
+          console.log(err);
+          res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
       }
       else {
-          res.status(OK).render(changeRoute, {database: upCaseDataBase,
-              table: table, columns: columns, upCaseColumns: upCaseColumns,
-              operation: operation, rows: rows, errors: null});
+          res.status(statusCode).json({row: row});
       }
   });
-
 });
 
-function validateRequest(req) {
-
-  req.check('id_series')
-      .trim()
-      .notEmpty().withMessage(msgIdSeriesNotEmpty)
-      .isInt().withMessage(msgIdSeriesInt);
-
-      req.check('id_actors')
-          .trim()
-          .notEmpty().withMessage(msgIdActorsNotEmpty)
-          .isInt().withMessage(msgIdActorsInt);
-
-  return req.validationErrors();
-
-}
-
-router.post('/save', urlencodedParser, function(req, res) {
-
-    const errors = validateRequest(req);
-    if (errors) {
-        res.status(BAD_REQUEST).render(changeRoute, {
-            database: upCaseDataBase, table: table,
-            columns: columns, upCaseColumns: upCaseColumns,
-            operation: operation, rows: null, errors: errors});
-    }
-    else {
-
-        const newValues = `id_series = "${req.body.id_series}
-            ", id_actors = "${req.body.id_actors}"`;
-        let statusCode = 0;
-        if (operation == opInsert) {
-            statusCode = insertRow(table, newValues);
-        }
-        else {
-            statusCode = updateRow(table, newValues, `id = ${id}`);
-        }
-
-        res.status(statusCode).redirect('.');
-
-    }
-
-});
-
-router.use('/', urlencodedParser, function(req, res) {
-    const sql = `SELECT * FROM ${table} ORDER BY id ASC;`;
-    const query = db.query(sql, (err, rows) => {
+router.use('/', function(req, res) {
+    selectAllForIntermediateTable(TABLE, SERIES_TABLE, ACTORS_TABLE,
+        `${TABLE}.id, ${TABLE}.id_series, ${TABLE}.id_actors, ${SERIES_TABLE
+        }.title, ${ACTORS_TABLE}.name, ${ACTORS_TABLE
+        }.last_name`, 'id_series', 'id_actors', 'id', 'id',
+        function (err, statusCode, rows) {
         if (err) {
-            res.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
+            console.log(err);
+            res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
         }
         else {
-            res.status(OK).render(tableRoute, {database: upCaseDataBase,
-                table: table, columns: columns, upCaseColumns: upCaseColumns, rows: rows});
+            res.status(statusCode).json({rows: rows});
         }
     });
 });

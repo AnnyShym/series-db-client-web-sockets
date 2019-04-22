@@ -1,37 +1,49 @@
 const express = require('express');
-const countries = require('../modules/countries');
-
 const router = express.Router();
+
+// Array of possible countries
+const COUNTRIES = require('../modules/countries');
 
 // Some information for queries
 const TABLE = 'actors';
+const ORDER_BY = 'ORDER BY name, middle_name, last_name ASC';
 
 // Some information for UI
-const COLUMNS = ['#', 'name', 'middle_name', 'last_name', 'citizenship'];
+const COLUMNS = ['id', 'name', 'middle_name', 'last_name', 'citizenship'];
+
+// Validation patterns
+const NAME_PATTERN = /^[A-Za-z]+('[A-Za-z]+)?(-|\s)?[A-Za-z]+('[A-Za-z]+)?$/;
+const MIDDLE_NAME_PATTERN = /^[A-Za-z]+('[A-Za-z]+)?(-|\s)?[A-Za-z]+('[A-Za-z]+)?$/;
+const LAST_NAME_PATTERN = /^[A-Za-z]+('[A-Za-z]+)?(-|\s)?[A-Za-z]+('[A-Za-z]+)?(\,\s[A-Za-z]+\.)?$/;
 
 // Some validation information
 const NAME_MAX = 50;
 
 // Some validation messages
-MSG_NAME_NOT_EMPTY = "Name is required!";
-MSG_NAME_MAX = `Name must contain not more than ${NAME_MAX} symbols!`;
-MSG_NAME_PATTERN = 'Invalid name!';
+const MSG_NAME_NOT_EMPTY = "Name is required!";
+const MSG_NAME_MAX = `Name must contain not more than ${NAME_MAX} symbols!`;
+const MSG_NAME_PATTERN = 'Invalid name!';
 
-MSG_MIDDLE_NAME_MAX = `Middle name must contain not more than ${NAME_MAX} symbols!`;
-MSG_MIDDLE_NAME_PATTERN = 'Invalid middle name!';
+const MSG_MIDDLE_NAME_MAX = `Middle name must contain not more than ${NAME_MAX} symbols!`;
+const MSG_MIDDLE_NAME_PATTERN = 'Invalid middle name!';
 
-MSG_LAST_NAME_NOT_EMPTY = "Last name is required!";
-MSG_LAST_NAME_MAX = `Last name must contain not more than ${NAME_MAX} symbols!`;
-MSG_LAST_NAME_PATTERN = 'Invalid last name!';
+const MSG_LAST_NAME_NOT_EMPTY = "Last name is required!";
+const MSG_LAST_NAME_MAX = `Last name must contain not more than ${NAME_MAX} symbols!`;
+const MSG_LAST_NAME_PATTERN = 'Invalid last name!';
 
-router.get('/countries', urlencodedParser, function(req, res) {
-    res.status(OK).json({countries: countries});
+router.get('/countries', function(req, res) {
+    res.status(OK).json({countries: COUNTRIES});
 });
 
 router.post('/delete/:id', function(req, res) {
-    const sql = `DELETE FROM ${TABLE} WHERE id = ${req.params.id};`;
-    const query = db.query(sql, (err, results) => {
-        err ? res.sendStatus(INTERNAL_SERVER_ERROR) : res.sendStatus(NO_CONTENT);
+    deleteRow(TABLE, `id = ${req.params.id}`, function (err, statusCode) {
+        if (err) {
+            console.log(err);
+            res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
+        }
+        else {
+            res.sendStatus(statusCode);
+        }
     });
 });
 
@@ -41,7 +53,7 @@ function validateRequest(req) {
       .trim()
       .notEmpty().withMessage(MSG_NAME_NOT_EMPTY)
       .isLength({ max: NAME_MAX }).withMessage(MSG_NAME_MAX)
-      .matches(/^[A-Za-z]+('[A-Za-z]+)?(-|\s)?[A-Za-z]+('[A-Za-z]+)?$/, 'i')
+      .matches(NAME_PATTERN, 'i')
       .withMessage(MSG_NAME_PATTERN);
 
   req.check('middle_name')
@@ -50,7 +62,7 @@ function validateRequest(req) {
 
   if (req.body.middle_name != '') {
       req.check('middle_name')
-      .matches(/^[A-Za-z]+('[A-Za-z]+)?(-|\s)?[A-Za-z]+('[A-Za-z]+)?$/, 'i')
+      .matches(MIDDLE_NAME_PATTERN, 'i')
       .withMessage(MSG_MIDDLE_NAME_PATTERN);
   }
 
@@ -58,7 +70,7 @@ function validateRequest(req) {
       .trim()
       .notEmpty().withMessage(MSG_LAST_NAME_NOT_EMPTY)
       .isLength({ max: NAME_MAX }).withMessage(MSG_LAST_NAME_MAX)
-      .matches(/^[A-Za-z]+('[A-Za-z]+)?(-|\s)?[A-Za-z]+('[A-Za-z]+)?(\,\s[A-Za-z]+\.)?$/, 'i')
+      .matches(LAST_NAME_PATTERN, 'i')
       .withMessage(MSG_LAST_NAME_PATTERN);
 
   return req.validationErrors();
@@ -80,9 +92,14 @@ router.post('/insert', urlencodedParser, function(req, res) {
             req.body.middle_name}", last_name = "${
             req.body.last_name}", citizenship = ${req.body.citizenship}`;
 
-        const sql = `INSERT INTO ${TABLE} SET ${newValues};`;
-        const query = db.query(sql, (err, results) => {
-            err ? res.sendStatus(INTERNAL_SERVER_ERROR) : res.sendStatus(CREATED);
+        insertRow(TABLE, newValues, function (err, statusCode) {
+            if (err) {
+                console.log(err);
+                res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
+            }
+            else {
+                res.sendStatus(statusCode);
+            }
         });
 
     }
@@ -103,36 +120,40 @@ router.post('/update/:id', urlencodedParser, function(req, res) {
             req.body.middle_name}", last_name = "${
             req.body.last_name}", citizenship = ${req.body.citizenship}`;
 
-        // const statusCode = updateRow(TABLE, newValues, `id = ${req.props.id}`);
-
-        const sql = `UPDATE ${TABLE} SET ${newValues} WHERE id = ${req.params.id};`;
-        const query = db.query(sql, (err, results) => {
-            err ? res.sendStatus(INTERNAL_SERVER_ERROR) : res.sendStatus(NO_CONTENT);
+        updateRow(TABLE, newValues, `id = ${req.params.id}`,
+            function (err, statusCode) {
+            if (err) {
+                console.log(err);
+                res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
+            }
+            else {
+                res.sendStatus(statusCode);
+            }
         });
 
     }
 });
 
-router.get('/:id', urlencodedParser, function(req, res) {
-  const sql = `SELECT * FROM ${TABLE} WHERE id = ${req.params.id};`;
-  const query = db.query(sql, (err, row) => {
+router.get('/:id', function(req, res) {
+  selectRow(TABLE, `id = ${req.params.id}`, function (err, statusCode, row) {
       if (err) {
-          res.status(INTERNAL_SERVER_ERROR).send(INTERNAL_ERROR_MSG);
+          console.log(err);
+          res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
       }
       else {
-          res.status(OK).json({actor: row});
+          res.status(statusCode).json({row: row});
       }
   });
 });
 
-router.use('/', urlencodedParser, function(req, res) {
-    const sql = `SELECT * FROM ${TABLE} ORDER BY name, middle_name, last_name ASC;`;
-    const query = db.query(sql, (err, rows) => {
+router.use('/', function(req, res) {
+    selectAllRows(TABLE, ORDER_BY, function (err, statusCode, rows) {
         if (err) {
-            res.status(INTERNAL_SERVER_ERROR).send(INTERNAL_ERROR_MSG);
+            console.log(err);
+            res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
         }
         else {
-            res.status(OK).json({rows: rows});
+            res.status(statusCode).json({rows: rows});
         }
     });
 });

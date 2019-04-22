@@ -1,100 +1,74 @@
 const express = require('express');
-const countries = require('../modules/countries');
-
 const router = express.Router();
 
+// Array of possible countries
+const COUNTRIES = require('../modules/countries');
+
 // Some information for queries
-const table = 'series';
+const TABLE = 'series';
+const ORDER_BY = 'ORDER BY title ASC, rating DESC';
 
 // Some information for UI
-const columns = ['#', 'title', 'country', 'description', 'rating'];
-const upCaseColumns = ['#', 'Title', 'Country', 'Description', 'Rating'];
-const ratingOptions = ['NULL', '1', '2', '3', '4', '5'];
-
-// Some information for routing
-const changeRoute = 'change/series';
+const COLUMNS = ['id', 'title', 'country', 'description', 'rating'];
+const RATING_OPTIONS = ['NULL', '1', '2', '3', '4', '5'];
 
 // Some validation information
-const titleMax = 50;
-const descriptionMax = 255;
+const TITLE_MAX = 50;
+const DESCRIPTION_MAX = 255;
 
 // Some validation messages
-msgTitleNotEmpty = "Title is required!";
-msgTitleMax = `Title must contain not more than ${titleMax} symbols!`;
-msgTitleAsciiOnly = 'Title may contain only ASCII symbols!';
+const MSG_TITLE_NOT_EMPTY = "Title is required!";
+const MSG_TITLE_MAX = `Title must contain not more than ${TITLE_MAX} symbols!`;
+const MSG_TITLE_ASCII_ONLY = 'Title may contain only ASCII symbols!';
 
-msgDescriptionMax = `Description must contain not more than ${descriptionMax} symbols!`;
-msgDescriptionAsciiOnly = 'Description may contain only ASCII symbols!';
+const MSG_DESCRIPTION_MAX = `Description must contain not more than ${DESCRIPTION_MAX} symbols!`;
+const MSG_DESCRIPTION_ASCII_ONLY = 'Description may contain only ASCII symbols!';
+
+router.get('/countries', function(req, res) {
+    res.status(OK).json({countries: COUNTRIES});
+});
+
+router.get('/ratingoptions', function(req, res) {
+    res.status(OK).json({ratingOptions: RATING_OPTIONS});
+});
 
 router.post('/delete/:id', function(req, res) {
-    const statusCode = deleteRow(table, `id = ${req.params.id}`)
-    res.status(statusCode).redirect(`/${table}`);
-});
-
-var operation = null;
-var id = 0;
-
-router.post('/insert', urlencodedParser, function(req, res) {
-
-  operation = opInsert;
-  id = 0;
-
-  res.status(OK).render(changeRoute, {database: upCaseDataBase,
-      table: table, columns: columns, upCaseColumns: upCaseColumns,
-      operation: operation, ratingOptions: ratingOptions, countries: countries,
-      rows: null, errors: null});
-
-});
-
-router.post('/update/:id', urlencodedParser, function(req, res) {
-
-  operation = opUpdate;
-  id = req.params.id;
-
-  const sql = `SELECT * FROM ${table} WHERE id = ${id};`;
-  const query = db.query(sql, (err, rows) => {
-      if (err) {
-          res.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
-      }
-      else {
-          res.status(OK).render(changeRoute, {database: upCaseDataBase,
-              table: table, columns: columns, upCaseColumns: upCaseColumns,
-              operation: operation, ratingOptions: ratingOptions,
-              countries: countries, rows: rows, errors: null});
-      }
-  });
-
+    deleteRow(TABLE, `id = ${req.params.id}`, function (err, statusCode) {
+        if (err) {
+            console.log(err);
+            res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
+        }
+        else {
+            res.sendStatus(statusCode);
+        }
+    });
 });
 
 function validateRequest(req) {
 
   req.check('title')
       .trim()
-      .notEmpty().withMessage(msgTitleNotEmpty)
-      .isLength({ max: titleMax }).withMessage(msgTitleMax)
-      .isAscii().withMessage(msgTitleAsciiOnly);
+      .notEmpty().withMessage(MSG_TITLE_NOT_EMPTY)
+      .isLength({ max: TITLE_MAX }).withMessage(MSG_TITLE_MAX)
+      .isAscii().withMessage(MSG_TITLE_ASCII_ONLY);
 
   req.check('description')
       .trim()
-      .isLength({ max: descriptionMax }).withMessage(msgDescriptionMax);
+      .isLength({ max: DESCRIPTION_MAX }).withMessage(MSG_DESCRIPTION_MAX);
 
   if (req.body.description != '') {
       req.check('description')
-      .isAscii().withMessage(msgDescriptionAsciiOnly);
+      .isAscii().withMessage(MSG_DESCRIPTION_ASCII_ONLY);
   }
 
   return req.validationErrors();
 
 }
 
-router.post('/save', urlencodedParser, function(req, res) {
+router.post('/insert', urlencodedParser, function(req, res) {
     const errors = validateRequest(req);
     if (errors) {
-        res.status(BAD_REQUEST).render(changeRoute, {
-            database: upCaseDataBase, table: table,
-            columns: columns, upCaseColumns: upCaseColumns,
-            operation: operation, ratingOptions: ratingOptions,
-            countries: countries, rows: null, errors: errors});
+        res.status(BAD_REQUEST).json({errors: errors});
     }
     else {
 
@@ -106,32 +80,78 @@ router.post('/save', urlencodedParser, function(req, res) {
             req.body.rating = `"${req.body.rating}"`;
         }
 
-        const newValues = `title = "${req.body.title}
-            ", country = ${req.body.country}, description = "${req.body.description}
-            ", rating = ${req.body.rating}`;
-        let statusCode = 0;
-        if (operation == opInsert) {
-            statusCode = insertRow(table, newValues);
-        }
-        else {
-            statusCode = updateRow(table, newValues, `id = ${id}`);
-        }
+        const newValues = `title = "${req.body.title}", country = ${
+            req.body.country}, description = "${
+            req.body.description}", rating = ${req.body.rating}`;
 
-        res.status(statusCode).redirect('.');
+        insertRow(TABLE, newValues, function (err, statusCode) {
+            if (err) {
+                console.log(err);
+                res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
+            }
+            else {
+                res.sendStatus(statusCode);
+            }
+        });
 
     }
 });
 
-router.use('/', urlencodedParser, function(req, res) {
-    const sql = `SELECT * FROM ${table} ORDER BY title ASC, rating DESC;`;
-    const query = db.query(sql, (err, rows) => {
+router.post('/update/:id', urlencodedParser, function(req, res) {
+    const errors = validateRequest(req);
+    if (errors) {
+        res.status(BAD_REQUEST).json({errors: errors});
+    }
+    else {
+
+        console.log(req.body.rating);
+
+        if (req.body.country != 'NULL') {
+            req.body.country = `"${req.body.country}"`;
+        }
+
+        if (req.body.rating != 'NULL') {
+            req.body.rating = `"${req.body.rating}"`;
+        }
+
+        const newValues = `title = "${req.body.title}", country = ${
+            req.body.country}, description = "${
+            req.body.description}", rating = ${req.body.rating}`;
+
+        updateRow(TABLE, newValues, `id = ${req.params.id}`,
+            function (err, statusCode) {
+            if (err) {
+                console.log(err);
+                res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
+            }
+            else {
+                res.sendStatus(statusCode);
+            }
+        });
+
+    }
+});
+
+router.get('/:id', function(req, res) {
+  selectRow(TABLE, `id = ${req.params.id}`, function (err, statusCode, row) {
+      if (err) {
+          console.log(err);
+          res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
+      }
+      else {
+          res.status(statusCode).json({row: row});
+      }
+  });
+});
+
+router.use('/', function(req, res) {
+    selectAllRows(TABLE, ORDER_BY, function (err, statusCode, rows) {
         if (err) {
-            res.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
+            console.log(err);
+            res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
         }
         else {
-            res.status(OK).render(tableRoute, {database: upCaseDataBase,
-                table: table, columns: columns, upCaseColumns: upCaseColumns,
-                rows: rows});
+            res.status(statusCode).json({rows: rows});
         }
     });
 });

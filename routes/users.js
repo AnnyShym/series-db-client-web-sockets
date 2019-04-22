@@ -2,123 +2,131 @@ const express = require('express');
 const router = express.Router();
 
 // Some information for queries
-const table = 'users';
+const TABLE = 'users';
+const ORDER_BY = 'ORDER BY id ASC';
 
 // Some information for UI
-const columns = ['#', 'login', 'password'];
-const upCaseColumns = ['#', 'Login', 'Password'];
+const COLUMNS = ['id', 'login', 'password'];
 
-// Some information for routing
-const changeRoute = 'change/users';
+// Validation patterns
+const DIGITS_PATTERN = '[0-9]';
+const LOW_LATIN_PATTERN = '[a-z]';
+const UP_LATIN_PATTERN = '[A-Z]';
 
 // Some validation information
-const loginMax = 50;
-const passwordMin = 8;
-const passwordMax = 20;
+const LOGIN_MAX = 50;
+const PASSWORD_MIN = 8;
+const PASSWORD_MAX = 20;
 
 // Some validation messages
-const msgLoginIncorrect = 'Login should be a valid email!';
-const msgLoginMax = `Login must contain not more than ${loginMax} symbols!`;
+const MSG_LOGIN_INCORRECT = 'Login should be a valid email!';
+const MSG_LOGIN_MAX = `Login must contain not more than ${LOGIN_MAX} symbols!`;
 
-const msgPasswordMin = `Password must contain at least ${passwordMin} symbols!`;
-const msgPasswordMax = `Password must contain not more than ${passwordMax} symbols!`;
-const msgPasswordAsciiOnly = 'Password may contain only ASCII symbols!';
-const msgPasswordDigits = 'Password must contain at least 1 digital!';
-const msgPasswordLowLatin = 'Password must contain at least 1 latin lowercase letter!';
-const msgPasswordUpLatin = 'Password must contain at least 1 latin uppercase letter!';
+const MSG_PASSWORD_MIN = `Password must contain at least ${PASSWORD_MIN} symbols!`;
+const MSG_PASSWORD_MAX = `Password must contain not more than ${PASSWORD_MAX} symbols!`;
+const MSG_PASSWORD_ASCII_ONLY = 'Password may contain only ASCII symbols!';
+const MSG_PASSWORD_DIGITS = 'Password must contain at least 1 digital!';
+const MSG_PASSWORD_LOW_LATIN = 'Password must contain at least 1 latin lowercase letter!';
+const MSG_PASSWORD_UP_LATIN = 'Password must contain at least 1 latin uppercase letter!';
 
-router.post('/delete/:id', urlencodedParser, function(req, res) {
-    const statusCode = deleteRow(table, `id = ${req.params.id}`)
-    res.status(statusCode).redirect(`/${table}`);
-});
-
-var operation = null;
-var id = 0;
-
-router.post('/insert', urlencodedParser, function(req, res) {
-
-  operation = opInsert;
-  id = 0;
-
-  res.status(OK).render(changeRoute, {database: upCaseDataBase,
-      table: table, columns: columns, upCaseColumns: upCaseColumns,
-      operation: operation, rows: null, errors: null});
-
-});
-
-router.post('/update/:id', urlencodedParser, function(req, res) {
-
-  operation = opUpdate;
-  id = req.params.id;
-
-  const sql = `SELECT * FROM ${table} WHERE id = ${id};`;
-  const query = db.query(sql, (err, rows) => {
-      if (err) {
-          res.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
-      }
-      else {
-          res.status(OK).render(changeRoute, {database: upCaseDataBase,
-              table: table, columns: columns, upCaseColumns: upCaseColumns,
-              operation: operation, rows: rows, errors: null});
-      }
-  });
-
+router.post('/delete/:id', function(req, res) {
+    deleteRow(TABLE, `id = ${req.params.id}`, function (err, statusCode) {
+        if (err) {
+            console.log(err);
+            res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
+        }
+        else {
+            res.sendStatus(statusCode);
+        }
+    });
 });
 
 function validateRequest(req) {
 
   req.check('login')
       .trim()
-      .isEmail().withMessage(msgLoginIncorrect)
-      .isLength({ max: loginMax }).withMessage(msgLoginMax)
+      .isEmail().withMessage(MSG_LOGIN_INCORRECT)
+      .isLength({ max: LOGIN_MAX }).withMessage(MSG_LOGIN_MAX)
 
   req.check('password')
-      .isLength({ min: passwordMin }).withMessage(msgPasswordMin)
-      .isLength({ max: passwordMax }).withMessage(msgPasswordMax)
-      .isAscii().withMessage(msgPasswordAsciiOnly)
-      .matches('[0-9]').withMessage(msgPasswordDigits)
-      .matches('[a-z]').withMessage(msgPasswordLowLatin)
-      .matches('[A-Z]').withMessage(msgPasswordUpLatin);
+      .isLength({ min: PASSWORD_MIN }).withMessage(MSG_PASSWORD_MIN)
+      .isLength({ max: PASSWORD_MAX }).withMessage(MSG_PASSWORD_MAX)
+      .isAscii().withMessage(MSG_PASSWORD_ASCII_ONLY)
+      .matches(DIGITS_PATTERN).withMessage(MSG_PASSWORD_DIGITS)
+      .matches(LOW_LATIN_PATTERN).withMessage(MSG_PASSWORD_LOW_LATIN)
+      .matches(UP_LATIN_PATTERN).withMessage(MSG_PASSWORD_UP_LATIN);
 
   return req.validationErrors();
 
 }
 
-router.post('/save', urlencodedParser, function(req, res) {
+router.post('/insert', urlencodedParser, function(req, res) {
     const errors = validateRequest(req);
     if (errors) {
-        res.status(BAD_REQUEST).render(changeRoute, {
-            database: upCaseDataBase, table: table,
-            columns: columns, upCaseColumns: upCaseColumns,
-            operation: operation, rows: null, errors: errors});
+        res.status(BAD_REQUEST).json({errors: errors});
     }
     else {
 
-        const newValues = `login = "${req.body.login}
-            ", password = "${req.body.password}"`;
-        let statusCode = 0;
-        if (operation == opInsert) {
-            statusCode = insertRow(table, newValues);
-        }
-        else {
-            statusCode = updateRow(table, newValues, `id = ${id}`);
-        }
+        const newValues = `login = "${req.body.login}", password = "${
+            req.body.password}"`;
 
-        res.status(statusCode).redirect('.');
+        insertRow(TABLE, newValues, function (err, statusCode) {
+            if (err) {
+                console.log(err);
+                res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
+            }
+            else {
+                res.sendStatus(statusCode);
+            }
+        });
 
     }
 });
 
-router.use('/', urlencodedParser, function(req, res) {
-    const sql = `SELECT * FROM ${table} ORDER BY id ASC;`;
-    const query = db.query(sql, (err, rows) => {
+router.post('/update/:id', urlencodedParser, function(req, res) {
+    const errors = validateRequest(req);
+    if (errors) {
+        res.status(BAD_REQUEST).json({errors: errors});
+    }
+    else {
+
+        const newValues = `login = "${req.body.login}", password = "${
+            req.body.password}"`;
+
+        updateRow(TABLE, newValues, `id = ${req.params.id}`,
+            function (err, statusCode) {
+            if (err) {
+                console.log(err);
+                res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
+            }
+            else {
+                res.sendStatus(statusCode);
+            }
+        });
+
+    }
+});
+
+router.get('/:id', function(req, res) {
+  selectRow(TABLE, `id = ${req.params.id}`, function (err, statusCode, row) {
+      if (err) {
+          console.log(err);
+          res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
+      }
+      else {
+          res.status(statusCode).json({row: row});
+      }
+  });
+});
+
+router.use('/', function(req, res) {
+    selectAllRows(TABLE, ORDER_BY, function (err, statusCode, rows) {
         if (err) {
-            res.status(INTERNAL_SERVER_ERROR).send(internalErrorMessage);
+            console.log(err);
+            res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
         }
         else {
-            res.status(OK).render(tableRoute, {database: upCaseDataBase,
-                table: table, columns: columns, upCaseColumns: upCaseColumns,
-                rows: rows});
+            res.status(statusCode).json({rows: rows});
         }
     });
 });

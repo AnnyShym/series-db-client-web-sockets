@@ -2,23 +2,20 @@ import React, { Component } from 'react';
 import { Redirect } from 'react-router-dom';
 import axios from 'axios';
 
-class ChangeActor extends Component {
+class ChangeUser extends Component {
 
     constructor(props) {
 
         super(props);
 
         this.state = {
-            table: 'actors',
+            table: 'users',
             route: 'http://localhost:8080/',
-            columns: ['id', 'name', 'middle_name', 'last_name', 'citizenship'],
-            columnsAlt: ['#', 'Name', 'Middle Name', 'Last Name', 'Citizenship'],
-            countries: [],
-            actor: {
-                name: '',
-                middle_name: '',
-                last_name: '',
-                citizenship: 'NULL'
+            columns: ['id', 'login', 'password'],
+            columnsAlt: ['#', 'Login', 'Password'],
+            user: {
+                login: '',
+                password: ''
             },
             changed: false,
             errors: []
@@ -32,41 +29,28 @@ class ChangeActor extends Component {
         this.opInsert = 'insert';
         this.opUpdate = 'update';
 
-        this.onChangeName= this.onChangeName.bind(this);
-        this.onChangeMiddleName = this.onChangeMiddleName.bind(this);
-        this.onChangeLastName = this.onChangeLastName.bind(this);
-        this.onChangeCitizenship = this.onChangeCitizenship.bind(this);
+        this.onChangeLogin = this.onChangeLogin.bind(this);
+        this.onChangePassword = this.onChangePassword.bind(this);
 
         this.onSubmit = this.onSubmit.bind(this);
 
     }
 
     componentDidMount() {
-
-        this.getCountries();
-
         if (this.props.match.params.operation === this.opUpdate) {
-            this.getActorInfo();
+            this.getUserInfo();
         }
-
     }
 
-    getCountries() {
-        axios.get(`${this.state.route}${this.state.table}/countries`)
-        .then(response => {
-            this.setState({
-                countries: response.data.countries
-            })
-        })
-        .catch(err => console.log(err))
-    }
-
-    getActorInfo() {
+    getUserInfo() {
         axios.get(`${this.state.route}${this.state.table}/${
             this.props.match.params.id}`)
         .then(response => {
             this.setState({
-                actor: response.data.row[0],
+                user: {
+                    ...this.state.user,
+                    login: response.data.row[0].login
+                },
                 errors: []
             })
         })
@@ -81,52 +65,31 @@ class ChangeActor extends Component {
         })
     }
 
-    onChangeName(e) {
+    onChangeLogin(e) {
         this.setState({
-            actor : {
-                ...this.state.actor,
-                name: e.target.value
+            user : {
+                ...this.state.user,
+                login: e.target.value
             }
         });
     }
 
-    onChangeMiddleName(e) {
+    onChangePassword(e) {
         this.setState({
-            actor: {
-                ...this.state.actor,
-                middle_name: e.target.value
+            user: {
+                ...this.state.user,
+                password: e.target.value
             }
         });
     }
-
-    onChangeLastName(e) {
-        this.setState({
-            actor: {
-                ...this.state.actor,
-                last_name: e.target.value
-            }
-        });
-    }
-
-    onChangeCitizenship(e) {
-        this.setState({
-            actor: {
-                ...this.state.actor,
-                citizenship: e.target[e.target.selectedIndex].value
-            }
-        });
-    }
-
 
     onSubmit(e) {
 
         e.preventDefault();
 
         const obj = {
-            name: this.state.actor.name,
-            middle_name: this.state.actor.middle_name,
-            last_name: this.state.actor.last_name,
-            citizenship: this.state.actor.citizenship,
+            login: this.state.user.login,
+            password: this.state.user.password
         };
 
         let route = null;
@@ -181,10 +144,6 @@ class ChangeActor extends Component {
             );
         }
 
-        const countryOptions = this.state.countries.map((country) =>
-            <option key={ country } value={ country }>{ country }</option>
-        );
-
         const operationAlt = this.props.match.params.operation[0].toUpperCase() +
             this.props.match.params.operation.slice(1);
 
@@ -198,21 +157,11 @@ class ChangeActor extends Component {
                     <form method="post" onSubmit={ this.onSubmit } align="center">
                         <div className="form-group">
                             <label htmlFor="exampleFormControlInput1">{ this.state.columnsAlt[1] }:</label>
-                            <input type="text" name={ this.state.columns[1] } value={ this.state.actor.name } onChange= { this.onChangeName } className="form-control" id="exampleFormControlInput1" required />
+                            <input type="text" name={ this.state.columns[1] } value={ this.state.user.login } onChange= { this.onChangeLogin } className="form-control" id="exampleFormControlInput1" required />
                         </div>
                         <div className="form-group">
                             <label htmlFor="exampleFormControlInput2">{ this.state.columnsAlt[2] }:</label>
-                            <input type="text" name={ this.state.columns[2] } value={ this.state.actor.middle_name } onChange= { this.onChangeMiddleName } className="form-control" id="exampleFormControlInput2" />
-                        </div>
-                        <div className="form-group">
-                            <label htmlFor="exampleFormControlInput3">{ this.state.columnsAlt[3] }:</label>
-                            <input type="text" name={ this.state.columns[3] } value={ this.state.actor.last_name } onChange= { this.onChangeLastName } className="form-control" id="exampleFormControlInput3" required />
-                        </div>
-                        <div className="form-group">
-                            <label htmlFor="exampleFormControlInput4">{ this.state.columnsAlt[4] }:</label>
-                            <select name={ this.state.columns[4] } value={ this.state.actor.citizenship } onChange= { this.onChangeCitizenship } className="form-control" id="exampleFormControlSelect1">
-                                { countryOptions }
-                            </select>
+                            <input type="password" name={ this.state.columns[2] } value={ this.state.user.password } onChange= { this.onChangePassword } className="form-control" id="exampleFormControlInput2" required />
                         </div>
                         <button type="submit" name={ operationAlt } className="btn btn-success" align="center">{ operationAlt }</button>
                     </form>
@@ -223,4 +172,4 @@ class ChangeActor extends Component {
     }
 }
 
-export default ChangeActor;
+export default ChangeUser;

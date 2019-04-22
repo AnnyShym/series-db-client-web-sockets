@@ -36,10 +36,6 @@ const INTERNAL_ERROR_MSG = 'Oops, some internal issues occured... Please, try ag
 const SERVER_LOG = `Server started on port ${PORT}.`;
 const CONNECTION_LOG = 'MySql database was connected.';
 
-// Some information for UI
-const OP_INSERT = 'insert';
-const OP_UPDATE = 'update';
-
 // Connecting to the DB
 // const CONNECTION_STR = 'mysql://root:root@192.168.99.100:3307/series_db?charset=utf8_general_ci&timezone=-0700';
 const db = mysql.createConnection({
@@ -56,16 +52,16 @@ db.connect((err) => {
     console.log(CONNECTION_LOG);
 });
 
-// // Creating the tables
-// const sqlFile = fs.readFileSync(DB_LOCATION).toString();
-// const arrSql = sqlFile.split('\r\n\r\n');
-// for (let i in arrSql) {
-//     const query = db.query(arrSql[i], (err, results) => {
-//         if (err) {
-//             throw(err);
-//         }
-//     });
-// }
+// Creating the tables
+const sqlFile = fs.readFileSync(DB_LOCATION).toString();
+const arrSql = sqlFile.split('\r\n\r\n');
+for (let i in arrSql) {
+    const query = db.query(arrSql[i], (err, results) => {
+        if (err) {
+            throw(err);
+        }
+    });
+}
 
 // Customizing the validator
 app.use(expressValidator({
@@ -86,32 +82,94 @@ app.use(expressValidator({
 }));
 
 // Some functions for export
-function insertRow(table, newValues) {
+function selectAllRows(table, orderBy, callback) {
+    const sql = `SELECT * FROM ${table} ${orderBy};`;
+    const query = db.query(sql, (err, rows) => {
+        if (err) {
+            callback(err, INTERNAL_SERVER_ERROR, null);
+        }
+        else {
+            callback(null, OK, rows);
+        }
+    });
+}
+
+function selectAllForIntermediateTable(table, table1ForJoin, table2ForJoin,
+    what, tableColumn1, tableColumn2, table1Column, table2Column, callback) {
+
+    const sql = `SELECT ${what} FROM ${table
+    } INNER JOIN ${table1ForJoin} ON ${table}.${tableColumn1} = ${table1ForJoin}.${table1Column
+    } INNER JOIN ${table2ForJoin} ON ${table}.${tableColumn2} = ${table2ForJoin}.${table2Column
+    };`;
+
+    const query = db.query(sql, (err, rows) => {
+        if (err) {
+            callback(err, INTERNAL_SERVER_ERROR, null);
+        }
+        else {
+            callback(null, OK, rows);
+        }
+    });
+
+}
+
+function selectRow(table, condition, callback) {
+    const sql = `SELECT * FROM ${table} WHERE ${condition};`;
+    const query = db.query(sql, (err, row) => {
+        if (err) {
+            callback(err, INTERNAL_SERVER_ERROR, null);
+        }
+        else {
+            callback(null, OK, row);
+        }
+    });
+}
+
+function selectPartialInfo(table, what, orderBy, callback) {
+    const sql = `SELECT ${what} FROM ${table} ${orderBy};`;
+    const query = db.query(sql, (err, rows) => {
+        if (err) {
+            callback(err, INTERNAL_SERVER_ERROR, null);
+        }
+        else {
+            callback(null, OK, rows);
+        }
+    });
+}
+
+function insertRow(table, newValues, callback) {
     const sql = `INSERT INTO ${table} SET ${newValues};`;
     const query = db.query(sql, (err, results) => {
-        let statusCode = 0;
-        err ? statusCode = INTERNAL_SERVER_ERROR : statusCode = CREATED;
-        return statusCode;
+        if (err) {
+            callback(err, INTERNAL_SERVER_ERROR);
+        }
+        else {
+            callback(null, CREATED);
+        }
     });
 }
 
-function deleteRow(table, condition) {
+function deleteRow(table, condition, callback) {
     const sql = `DELETE FROM ${table} WHERE ${condition};`;
-    console.log('2');
     const query = db.query(sql, (err, results) => {
-        let statusCode = 0;
-        err ? statusCode = INTERNAL_SERVER_ERROR : statusCode = NO_CONTENT;
-        console.log('3');
-        return statusCode;
+        if (err) {
+            callback(err, INTERNAL_SERVER_ERROR);
+        }
+        else {
+            callback(null, NO_CONTENT);
+        }
     });
 }
 
-function updateRow(table, newValues, condition) {
+function updateRow(table, newValues, condition, callback) {
     const sql = `UPDATE ${table} SET ${newValues} WHERE ${condition};`;
     const query = db.query(sql, (err, results) => {
-        let statusCode = 0;
-        err ? statusCode = INTERNAL_SERVER_ERROR : statusCode = NO_CONTENT;
-        return statusCode;
+        if (err) {
+            callback(err, INTERNAL_SERVER_ERROR);
+        }
+        else {
+            callback(null, NO_CONTENT);
+        }
     });
 }
 
@@ -120,13 +178,15 @@ global.urlencodedParser = urlencodedParser;
 global.db = db;
 global.expressValidator = expressValidator;
 
+global.selectAllRows = selectAllRows;
+global.selectAllForIntermediateTable = selectAllForIntermediateTable;
+global.selectRow = selectRow;
+global.selectPartialInfo = selectPartialInfo;
 global.insertRow = insertRow;
 global.deleteRow = deleteRow;
 global.updateRow = updateRow;
 
 global.DB_NAME = DB_NAME;
-global.OP_INSERT = OP_INSERT;
-global.OP_UPDATE = OP_UPDATE;
 
 global.OK = OK;
 global.CREATED = CREATED;
@@ -137,14 +197,11 @@ global.INTERNAL_SERVER_ERROR = INTERNAL_SERVER_ERROR;
 global.INTERNAL_ERROR_MSG = INTERNAL_ERROR_MSG;
 
 // Customizing routes handlers
-// let routerTables = [];
-// for (let i = 0; i < TABLES.length; i++) {
-//   routerTables.push(require(`${ROUTES_DIR}${TABLES[i]}`));
-//   app.use(`/${TABLES[i]}`, routerTables[i]);
-// }
-
-const routerTable = require('./routes/actors');
-app.use(`/actors`, routerTable);
+let routerTables = [];
+for (let i = 0; i < TABLES.length; i++) {
+  routerTables.push(require(`${ROUTES_DIR}${TABLES[i]}`));
+  app.use(`/${TABLES[i]}`, routerTables[i]);
+}
 
 // Starting to listen
 app.listen(PORT, () => {

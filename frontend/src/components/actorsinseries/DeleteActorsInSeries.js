@@ -1,26 +1,27 @@
+
 import React, { Component } from 'react';
 import { Redirect } from 'react-router-dom';
 import axios from 'axios';
 
-class DeleteActor extends Component {
+class DeleteActorsInSeries extends Component {
 
     constructor(props) {
 
         super(props);
 
         this.state = {
-            table: 'actors',
+            table: 'actorsinseries',
             route: 'http://localhost:8080/'
         }
 
     }
 
     componentDidMount() {
-        this.deleteActor(this.props.match.params.id);
+        this.deleteActorsInSeries(this.props.match.params.id);
     }
 
-    deleteActor(actorId) {
-        axios.post(`${this.state.route}${this.state.table}/delete/${actorId}`)
+    deleteActorsInSeries(actorsInSeriesId) {
+        axios.post(`${this.state.route}${this.state.table}/delete/${actorsInSeriesId}`)
             .catch(err => console.log(err))
     }
 
@@ -33,4 +34,4 @@ class DeleteActor extends Component {
     }
 }
 
-export default DeleteActor;
+export default DeleteActorsInSeries;

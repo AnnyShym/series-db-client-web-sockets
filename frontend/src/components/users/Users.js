@@ -1,51 +1,67 @@
 import React, { Component } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 
 import Table from '../Table';
 
 class Users extends Component {
 
-  constructor(props) {
+    constructor(props) {
 
-    super(props);
+        super(props);
 
-    this.state = {
-      table: 'users',
-      route: 'http://localhost:8080/',
-      columns: ['#', 'Login', 'Password'],
-      rows: []
-    };
+        this.state = {
+            table: 'users',
+            route: 'http://localhost:8080/',
+            columns: ['#', 'Login', 'Password'],
+            rows: []
+        };
 
-  }
+    }
 
-  getUsers() {
-    axios.get(`${this.state.route}${this.state.table}`)
-      .then(response => {
-        this.setState({
-          rows: response.data.rows
+    componentDidMount() {
+        this.getUsers();
+    }
+
+    getUsers() {
+        axios.get(`${this.state.route}${this.state.table}`)
+        .then(response => {
+            this.setState({
+                rows: response.data.rows
+            })
         })
-      })
-      .catch(err => console.log(err))
-  }
+        .catch(err => {
+            console.log(err);
+        })
+    }
 
-  getRowInfo(row) {
-    return(
-      <div>
-        <td>{ row.login }</td>
-        <td>{ row.password }</td>
-      </div>
-    )
-  }
+    getUserInfo(table, row) {
+        return(
 
-  render() {
+            <tr>
+                <th scope="row">{ row.id }</th>
+                <td>{ row.login }</td>
+                <td>{ row.password }</td>
+                <td>
+                    <div className="btn-group-vertical">
+                        <Link to={ `/${table}/update/${row.id}` } rel="noopener" className="btn btn-sm btn-success">Update</Link>
+                        <Link to={ `/${table}/delete/${row.id}` } rel="noopener" className="btn btn-sm btn-danger">Delete</Link>
+                    </div>
+                </td>
+            </tr>
 
-    this.getUsers();
+        )
+    }
 
-    return(
-      <Table table={this.state.table} columns={this.state.columns} rows={this.state.rows} getRowInfo={this.getRowInfo} />
-    )
+    render() {
 
-  }
+        return(
+
+            <Table table={ this.state.table } columns={ this.state.columns } rows={ this.state.rows } getRowInfo={ this.getUserInfo } />
+
+        )
+
+    }
 
 }
 

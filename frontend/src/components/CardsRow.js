@@ -12,8 +12,7 @@ class Home extends Component {
         super(props);
 
         this.state = {
-            tables: ['users', 'series', 'actors', 'actorsinseries'],
-            tablesAlt: ['Users', 'Series', 'Actors', 'Actors In Series'],
+            cardsInRow: 3,
         };
 
     }
