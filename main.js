@@ -4,12 +4,15 @@ const bodyParser = require('body-parser');
 const expressValidator = require('express-validator');
 const fs = require('fs');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 app.set('view engine', 'ejs');
 const urlencodedParser = bodyParser.urlencoded({ extended: false });
 app.use(bodyParser.json());
 app.use(cors());
+app.use(cookieParser());
 
 // Some server info
 const PORT = 8080;
@@ -27,10 +30,12 @@ const OK = 200;
 const CREATED = 201;
 const NO_CONTENT = 204;
 const BAD_REQUEST = 400;
+const UNAUTHORIZED = 401;
 const INTERNAL_SERVER_ERROR = 500
 
 // Status messages
 const INTERNAL_ERROR_MSG = 'Oops, some internal issues occured... Please, try again!';
+const UNAUTHORIZED_MSG = 'Please, sign in as administrator first!';
 
 // Logs
 const SERVER_LOG = `Server started on port ${PORT}.`;
@@ -80,6 +85,35 @@ app.use(expressValidator({
     };
   }
 }));
+
+app.use(function (req, res, next) {
+    res.header("Access-Control-Allow-Methods", "GET, POST");
+    res.header("Access-Control-Allow-Headers", "Content-Type");
+    next();
+});
+
+const key = "secretKey";
+let cookieJwt = null;
+
+app.use(function (request, response, next) {
+    if (request.originalUrl != "/signup" && request.originalUrl != "/signin") {
+
+        cookieJwt = request.cookies.auth;
+
+        jwt.verify(cookieJwt, key, function(err, decoded) {
+            try {
+                next();
+            }
+            catch (err) {
+                response.status(UNAUTHORIZED)..json({errors: UNAUTHORIZED_MSG});;
+            }
+        });
+
+    }
+    else {
+        next();
+    }
+});
 
 // Some functions for export
 function selectAllRows(table, orderBy, callback) {
@@ -176,6 +210,7 @@ function updateRow(table, newValues, condition, callback) {
 // Indicating global data
 global.urlencodedParser = urlencodedParser;
 global.db = db;
+global.jwt = jwt;
 global.expressValidator = expressValidator;
 
 global.selectAllRows = selectAllRows;
@@ -192,6 +227,7 @@ global.OK = OK;
 global.CREATED = CREATED;
 global.NO_CONTENT = NO_CONTENT;
 global.BAD_REQUEST = BAD_REQUEST;
+global.UNAUTHORIZED = UNAUTHORIZED;
 global.INTERNAL_SERVER_ERROR = INTERNAL_SERVER_ERROR;
 
 global.INTERNAL_ERROR_MSG = INTERNAL_ERROR_MSG;
@@ -202,6 +238,10 @@ for (let i = 0; i < TABLES.length; i++) {
   routerTables.push(require(`${ROUTES_DIR}${TABLES[i]}`));
   app.use(`/${TABLES[i]}`, routerTables[i]);
 }
+
+routerTables.push(require(`${ROUTES_DIR}authentification`));
+app.use('/signup', routerTables[routerTables.length - 1]);
+app.use('/signin', routerTables[routerTables.length - 1]);
 
 // Starting to listen
 app.listen(PORT, () => {

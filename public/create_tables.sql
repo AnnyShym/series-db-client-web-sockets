@@ -47,6 +47,14 @@ CREATE TABLE IF NOT EXISTS `actorsinseries` (
   KEY `IXFK_ACTORS_IN_SERIES_ACTORS` (`id_actors`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+CREATE TABLE IF NOT EXISTS `administrators` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `login` varchar(50) NOT NULL,
+  `password` varchar(32) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `login` (`login`)
+) ENGINE=MyISAM AUTO_INCREMENT=26 DEFAULT CHARSET=latin1;
+
 ALTER TABLE `actorsinseries`
  ADD CONSTRAINT `FK_Actors_In_Series_Series`
 	FOREIGN KEY (`id_series`) REFERENCES `series` (`id`) ON DELETE Cascade ON UPDATE Cascade
@@ -66,6 +74,16 @@ END
 DROP TRIGGER IF EXISTS `TRG_Users_OnUpdate`;
 
 CREATE TRIGGER `TRG_Users_OnUpdate` BEFORE UPDATE ON `users` FOR EACH ROW BEGIN
+  SET NEW.password = md5(NEW.password);
+END
+
+CREATE TRIGGER `TRG_Administrators_OnInsert` BEFORE INSERT ON `administrators` FOR EACH ROW BEGIN
+  SET NEW.password = md5(NEW.password);
+END
+
+DROP TRIGGER IF EXISTS `TRG_Administrators_OnUpdate`;
+
+CREATE TRIGGER `TRG_Users_OnUpdate` BEFORE UPDATE ON `administrators` FOR EACH ROW BEGIN
   SET NEW.password = md5(NEW.password);
 END
 

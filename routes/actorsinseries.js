@@ -96,7 +96,7 @@ router.get('/:id', function(req, res) {
   });
 });
 
-router.use('/', function(req, res) {
+router.get('/', function(req, res) {
     selectAllForIntermediateTable(TABLE, SERIES_TABLE, ACTORS_TABLE,
         `${TABLE}.id, ${TABLE}.id_series, ${TABLE}.id_actors, ${SERIES_TABLE
         }.title, ${ACTORS_TABLE}.name, ${ACTORS_TABLE

@@ -144,7 +144,7 @@ router.get('/:id', function(req, res) {
   });
 });
 
-router.use('/', function(req, res) {
+router.get('/', function(req, res) {
     selectAllRows(TABLE, ORDER_BY, function (err, statusCode, rows) {
         if (err) {
             console.log(err);
