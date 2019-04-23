@@ -19,12 +19,14 @@ class ChangeActorsInSeries extends Component {
                 id_series: 'NULL',
                 id_actors: 'NULL'
             },
+            authorized: true,
             changed: false,
             errors: []
         }
 
         this.statusCodes = {
             BAD_REQUEST: 400,
+            UNAUTHORIZED: 401,
             INTERNAL_SERVER_ERROR: 500
         };
 
@@ -54,15 +56,25 @@ class ChangeActorsInSeries extends Component {
         .then(response => {
             this.setState({
                 seriesInfo: response.data.rows,
+                authorized: true,
                 errors: []
             })
         })
         .catch(err => {
             console.log(err);
             if (err.response && err.response.status ===
+                this.statusCodes.UNAUTHORIZED) {
+                this.setState({
+                    seriesInfo: [],
+                    authorized: false,
+                    errors: err.response.data.errors
+                });
+            }
+            if (err.response && err.response.status ===
                 this.statusCodes.INTERNAL_SERVER_ERROR) {
                 this.setState({
-                    errors: err.response.data.errors,
+                    seriesInfo: [],
+                    errors: err.response.data.errors
                 });
             }
         })
@@ -73,15 +85,25 @@ class ChangeActorsInSeries extends Component {
         .then(response => {
             this.setState({
                 actorsInfo: response.data.rows,
+                authorized: true,
                 errors: []
             })
         })
         .catch(err => {
             console.log(err);
             if (err.response && err.response.status ===
+                this.statusCodes.UNAUTHORIZED) {
+                this.setState({
+                    actorsInfo: [],
+                    authorized: false,
+                    errors: err.response.data.errors
+                });
+            }
+            if (err.response && err.response.status ===
                 this.statusCodes.INTERNAL_SERVER_ERROR) {
                 this.setState({
-                    errors: err.response.data.errors,
+                    actorsInfo: [],
+                    errors: err.response.data.errors
                 });
             }
         })
@@ -93,15 +115,31 @@ class ChangeActorsInSeries extends Component {
         .then(response => {
             this.setState({
                 actorsinseries: response.data.row[0],
+                authorized: true,
                 errors: []
             })
         })
         .catch(err => {
             console.log(err);
             if (err.response && err.response.status ===
+                this.statusCodes.UNAUTHORIZED) {
+                this.setState({
+                    actorsinseries: {
+                        id_series: 'NULL',
+                        id_actors: 'NULL'
+                    },
+                    authorized: false,
+                    errors: err.response.data.errors
+                });
+            }
+            if (err.response && err.response.status ===
                 this.statusCodes.INTERNAL_SERVER_ERROR) {
                 this.setState({
-                    errors: err.response.data.errors,
+                    actorsinseries: {
+                        id_series: 'NULL',
+                        id_actors: 'NULL'
+                    },
+                    errors: err.response.data.errors
                 });
             }
         })
@@ -145,22 +183,31 @@ class ChangeActorsInSeries extends Component {
         }
 
         axios.post(route, obj)
-            .then((response) => {
+        .then(response => {
+            this.setState({
+                authorized: true,
+                changed: true,
+                errors: []
+            })
+        })
+        .catch(err => {
+            console.log(err);
+            if (err.response && err.response.status ===
+                this.statusCodes.UNAUTHORIZED) {
                 this.setState({
-                    errors: [],
-                    changed: true
+                    authorized: false,
+                    changed: false,
+                    errors: err.response.data.errors
                 });
-            })
-            .catch(err => {
-                console.log(err);
-                if (err.response && (err.response.status ===
-                    this.statusCodes.INTERNAL_SERVER_ERROR)) {
-                        this.setState({
-                            errors: err.response.data.errors,
-                            changed: false
-                        });
-                    }
-            })
+            }
+            if (err.response && err.response.status ===
+                this.statusCodes.INTERNAL_SERVER_ERROR) {
+                this.setState({
+                    changed: false,
+                    errors: err.response.data.errors
+                });
+            }
+        })
 
     }
 
@@ -172,17 +219,24 @@ class ChangeActorsInSeries extends Component {
         }
 
         let errorBlocks = null;
-        if (this.state.changed) {
+        if (!this.state.authorized) {
             return <Redirect from={ `/${this.state.table}/${
                 this.props.match.params.operation}/${
-                this.props.match.params.id}` } to={ `/${this.state.table}` } />
+                this.props.match.params.id}` } to='/signin' />
         }
         else {
-            errorBlocks = this.state.errors.map((error) =>
-                <div key={ error.msg } className="container">
-                    <div className="alert alert-danger">{ error.msg }</div>
-                </div>
-            );
+            if (this.state.changed) {
+                return <Redirect from={ `/${this.state.table}/${
+                    this.props.match.params.operation}/${
+                    this.props.match.params.id}` } to={ `/${this.state.table}` } />
+            }
+            else {
+                errorBlocks = this.state.errors.map((error) =>
+                    <div key={ error.msg } className="container">
+                        <div className="alert alert-danger">{ error.msg }</div>
+                    </div>
+                );
+            }
         }
 
         const seriesOptions = this.state.seriesInfo.map((series) =>

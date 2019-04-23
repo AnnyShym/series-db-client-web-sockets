@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Link } from 'react-router-dom';
+import { Redirect, Link } from 'react-router-dom';
 import axios from 'axios';
 
 import Table from '../Table';
@@ -14,7 +14,14 @@ class Users extends Component {
             table: 'users',
             route: 'http://localhost:8080/',
             columns: ['#', 'Login', 'Password'],
-            rows: []
+            rows: [],
+            authorized: true,
+            errors: []
+        };
+
+        this.statusCodes = {
+            UNAUTHORIZED: 401,
+            INTERNAL_SERVER_ERROR: 500
         };
 
     }
@@ -27,11 +34,28 @@ class Users extends Component {
         axios.get(`${this.state.route}${this.state.table}`)
         .then(response => {
             this.setState({
-                rows: response.data.rows
+                rows: response.data.rows,
+                authorized: true,
+                errors: []
             })
         })
         .catch(err => {
             console.log(err);
+            if (err.response && err.response.status ===
+                this.statusCodes.UNAUTHORIZED) {
+                this.setState({
+                    rows: [],
+                    authorized: false,
+                    errors: err.response.data.errors
+                });
+            }
+            if (err.response && err.response.status ===
+                this.statusCodes.INTERNAL_SERVER_ERROR) {
+                this.setState({
+                    rows: [],
+                    errors: err.response.data.errors
+                });
+            }
         })
     }
 
@@ -55,9 +79,21 @@ class Users extends Component {
 
     render() {
 
+        let errorBlocks = null;
+        if (!this.state.authorized) {
+            return <Redirect from={ `/${this.state.table}` } to='/signin' />
+        }
+        else {
+            errorBlocks = this.state.errors.map((error) =>
+                <div key={ error.msg } className="container">
+                    <div className="alert alert-danger">{ error.msg }</div>
+                </div>
+            );
+        }
+
         return(
 
-            <Table table={ this.state.table } columns={ this.state.columns } rows={ this.state.rows } getRowInfo={ this.getUserInfo } />
+            <Table table={ this.state.table } columns={ this.state.columns } rows={ this.state.rows } getRowInfo={ this.getUserInfo } errorBlocks={ errorBlocks } />
 
         )
 

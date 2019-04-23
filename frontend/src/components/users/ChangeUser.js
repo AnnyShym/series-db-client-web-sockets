@@ -17,12 +17,14 @@ class ChangeUser extends Component {
                 login: '',
                 password: ''
             },
+            authorized: true,
             changed: false,
             errors: []
         }
 
         this.statusCodes = {
             BAD_REQUEST: 400,
+            UNAUTHORIZED: 401,
             INTERNAL_SERVER_ERROR: 500
         };
 
@@ -48,18 +50,34 @@ class ChangeUser extends Component {
         .then(response => {
             this.setState({
                 user: {
-                    ...this.state.user,
-                    login: response.data.row[0].login
+                    login: response.data.row[0].login,
+                    password: ''
                 },
+                authorized: true,
                 errors: []
             })
         })
         .catch(err => {
             console.log(err);
             if (err.response && err.response.status ===
+                this.statusCodes.UNAUTHORIZED) {
+                this.setState({
+                    user: {
+                        login: '',
+                        password: ''
+                    },
+                    authorized: false,
+                    errors: err.response.data.errors
+                });
+            }
+            if (err.response && err.response.status ===
                 this.statusCodes.INTERNAL_SERVER_ERROR) {
                 this.setState({
-                    errors: err.response.data.errors,
+                    user: {
+                        login: '',
+                        password: ''
+                    },
+                    errors: err.response.data.errors
                 });
             }
         })
@@ -103,23 +121,32 @@ class ChangeUser extends Component {
         }
 
         axios.post(route, obj)
-            .then((response) => {
+        .then(response => {
+            this.setState({
+                authorized: true,
+                changed: true,
+                errors: []
+            })
+        })
+        .catch(err => {
+            console.log(err);
+            if (err.response && err.response.status ===
+                this.statusCodes.UNAUTHORIZED) {
                 this.setState({
-                    errors: [],
-                    changed: true
+                    authorized: false,
+                    changed: false,
+                    errors: err.response.data.errors
                 });
-            })
-            .catch(err => {
-                console.log(err);
-                if (err.response && (err.response.status ===
-                    this.statusCodes.INTERNAL_SERVER_ERROR ||
-                    err.response.status === this.statusCodes.BAD_REQUEST)) {
-                        this.setState({
-                            errors: err.response.data.errors,
-                            changed: false
-                        });
-                    }
-            })
+            }
+            if (err.response && (err.response.status ===
+                this.statusCodes.INTERNAL_SERVER_ERROR ||
+                err.response.status === this.statusCodes.BAD_REQUEST)) {
+                this.setState({
+                    changed: false,
+                    errors: err.response.data.errors
+                });
+            }
+        })
 
     }
 
@@ -131,17 +158,24 @@ class ChangeUser extends Component {
         }
 
         let errorBlocks = null;
-        if (this.state.changed) {
+        if (!this.state.authorized) {
             return <Redirect from={ `/${this.state.table}/${
                 this.props.match.params.operation}/${
-                this.props.match.params.id}` } to={ `/${this.state.table}` } />
+                this.props.match.params.id}` } to='/signin' />
         }
         else {
-            errorBlocks = this.state.errors.map((error) =>
-                <div key={ error.msg } className="container">
-                    <div className="alert alert-danger">{ error.msg }</div>
-                </div>
-            );
+            if (this.state.changed) {
+                return <Redirect from={ `/${this.state.table}/${
+                    this.props.match.params.operation}/${
+                    this.props.match.params.id}` } to={ `/${this.state.table}` } />
+            }
+            else {
+                errorBlocks = this.state.errors.map((error) =>
+                    <div key={ error.msg } className="container">
+                        <div className="alert alert-danger">{ error.msg }</div>
+                    </div>
+                );
+            }
         }
 
         const operationAlt = this.props.match.params.operation[0].toUpperCase() +

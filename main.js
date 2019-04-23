@@ -105,7 +105,7 @@ app.use(function (request, response, next) {
                 next();
             }
             catch (err) {
-                response.status(UNAUTHORIZED)..json({errors: UNAUTHORIZED_MSG});;
+                response.status(UNAUTHORIZED).json({errors: UNAUTHORIZED_MSG});
             }
         });
 
@@ -242,6 +242,10 @@ for (let i = 0; i < TABLES.length; i++) {
 routerTables.push(require(`${ROUTES_DIR}authentification`));
 app.use('/signup', routerTables[routerTables.length - 1]);
 app.use('/signin', routerTables[routerTables.length - 1]);
+
+router.get('/', function(req, res) {
+    res.sendStatus(NO_CONTENT);
+});
 
 // Starting to listen
 app.listen(PORT, () => {

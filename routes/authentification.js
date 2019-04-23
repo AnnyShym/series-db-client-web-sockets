@@ -1,11 +1,10 @@
 const express = require('express');
+const md5 = require('md5');
+const config = require('../config');
+
 const router = express.Router();
 
 const TABLE = 'administrators';
-
-const KEY = 'jwt-one-love';
-const TIME_JWT = '60000';
-const TIME_COOKIE = 120000;
 
 // Validation patterns
 const DIGITS_PATTERN = '[0-9]';
@@ -19,6 +18,7 @@ const PASSWORD_MAX = 20;
 
 // Some validation messages
 const MSG_CANNOT_FIND = 'The administrator hasn\'t been signed up in the system!';
+const MSG_INCORRECT_PASSWORD = 'Incorrect password!';
 
 const MSG_LOGIN_INCORRECT = 'Login should be a valid email!';
 const MSG_LOGIN_MAX = `Login must contain not more than ${LOGIN_MAX} symbols!`;
@@ -43,15 +43,22 @@ router.post('/signin', function(req, res) {
             res.status(BAD_REQUEST).json({errors: MSG_CANNOT_FIND});
         }
 
-        const token = jwt.sign({
-            login: result[0].login,
-            password: result[0].password
-        }, KEY,
-            { expiresIn: TIME_JWT }
-        );
+        if (md5(req.body.password) === result[0].password) {
 
-        res.cookie('auth', token, { httpOnly: true, maxAge: TIME_COOKIE });
-        res.sendStatus(OK);
+            const token = jwt.sign({
+                login: result[0].login,
+                password: result[0].password
+            }, config.KEY,
+                { expiresIn: config.TIME_JWT }
+            );
+
+            res.cookie('auth', token, { httpOnly: true, maxAge: config.TIME_COOKIE });
+            res.sendStatus(OK);
+
+        }
+        else {
+            res.status(BAD_REQUEST).json({errors: MSG_INCORRECT_PASSWORD});
+        }
 
     });
 }

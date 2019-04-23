@@ -20,12 +20,14 @@ class ChangeActor extends Component {
                 last_name: '',
                 citizenship: 'NULL'
             },
+            authorized: true,
             changed: false,
             errors: []
         }
 
         this.statusCodes = {
             BAD_REQUEST: 400,
+            UNAUTHORIZED: 401,
             INTERNAL_SERVER_ERROR: 500
         };
 
@@ -55,10 +57,22 @@ class ChangeActor extends Component {
         axios.get(`${this.state.route}${this.state.table}/countries`)
         .then(response => {
             this.setState({
-                countries: response.data.countries
+                countries: response.data.countries,
+                authorized: true,
+                errors: []
             })
         })
-        .catch(err => console.log(err))
+        .catch(err => {
+            console.log(err);
+            if (err.response && err.response.status ===
+                this.statusCodes.UNAUTHORIZED) {
+                this.setState({
+                    countries: [],
+                    authorized: false,
+                    errors: err.response.data.errors
+                });
+            }
+        })
     }
 
     getActorInfo() {
@@ -67,15 +81,35 @@ class ChangeActor extends Component {
         .then(response => {
             this.setState({
                 actor: response.data.row[0],
+                authorized: true,
                 errors: []
             })
         })
         .catch(err => {
             console.log(err);
             if (err.response && err.response.status ===
+                this.statusCodes.UNAUTHORIZED) {
+                this.setState({
+                    actor: {
+                        name: '',
+                        middle_name: '',
+                        last_name: '',
+                        citizenship: 'NULL'
+                    },
+                    authorized: false,
+                    errors: err.response.data.errors
+                });
+            }
+            if (err.response && err.response.status ===
                 this.statusCodes.INTERNAL_SERVER_ERROR) {
                 this.setState({
-                    errors: err.response.data.errors,
+                    actor: {
+                        name: '',
+                        middle_name: '',
+                        last_name: '',
+                        citizenship: 'NULL'
+                    },
+                    errors: err.response.data.errors
                 });
             }
         })
@@ -140,23 +174,32 @@ class ChangeActor extends Component {
         }
 
         axios.post(route, obj)
-            .then((response) => {
+        .then(response => {
+            this.setState({
+                authorized: true,
+                changed: true,
+                errors: []
+            })
+        })
+        .catch(err => {
+            console.log(err);
+            if (err.response && err.response.status ===
+                this.statusCodes.UNAUTHORIZED) {
                 this.setState({
-                    errors: [],
-                    changed: true
+                    authorized: false,
+                    changed: false,
+                    errors: err.response.data.errors
                 });
-            })
-            .catch(err => {
-                console.log(err);
-                if (err.response && (err.response.status ===
-                    this.statusCodes.INTERNAL_SERVER_ERROR ||
-                    err.response.status === this.statusCodes.BAD_REQUEST)) {
-                        this.setState({
-                            errors: err.response.data.errors,
-                            changed: false
-                        });
-                    }
-            })
+            }
+            if (err.response && (err.response.status ===
+                this.statusCodes.INTERNAL_SERVER_ERROR ||
+                err.response.status === this.statusCodes.BAD_REQUEST)) {
+                this.setState({
+                    changed: false,
+                    errors: err.response.data.errors
+                });
+            }
+        })
 
     }
 
@@ -168,17 +211,24 @@ class ChangeActor extends Component {
         }
 
         let errorBlocks = null;
-        if (this.state.changed) {
+        if (!this.state.authorized) {
             return <Redirect from={ `/${this.state.table}/${
                 this.props.match.params.operation}/${
-                this.props.match.params.id}` } to={ `/${this.state.table}` } />
+                this.props.match.params.id}` } to='/signin' />
         }
         else {
-            errorBlocks = this.state.errors.map((error) =>
-                <div key={ error.msg } className="container">
-                    <div className="alert alert-danger">{ error.msg }</div>
-                </div>
-            );
+            if (this.state.changed) {
+                return <Redirect from={ `/${this.state.table}/${
+                    this.props.match.params.operation}/${
+                    this.props.match.params.id}` } to={ `/${this.state.table}` } />
+            }
+            else {
+                errorBlocks = this.state.errors.map((error) =>
+                    <div key={ error.msg } className="container">
+                        <div className="alert alert-danger">{ error.msg }</div>
+                    </div>
+                );
+            }
         }
 
         const countryOptions = this.state.countries.map((country) =>

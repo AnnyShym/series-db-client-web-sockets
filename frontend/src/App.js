@@ -2,6 +2,9 @@ import React, { Component } from 'react';
 import { BrowserRouter as Router, Switch, Route } from 'react-router-dom';
 
 import Home from './components/Home';
+import SignUp from './components/authorization/SignUp';
+import SignIn from './components/authorization/SignIn';
+import Home from './components/Home';
 import Actors from './components/actors/Actors';
 import DeleteActor from './components/actors/DeleteActor';
 import ChangeActor from './components/actors/ChangeActor';
@@ -22,6 +25,8 @@ class App extends Component {
             <Router>
                 <Switch>
                     <Route exact path='/' component={ Home }/>
+                    <Route exact path='/signup' component={ SignUp }/>
+                    <Route exact path='/signin' component={ SignIn }/>
                     <Route exact path='/actors/delete/:id' component={ DeleteActor } />
                     <Route exact path='/actors/:operation/:id' component={ ChangeActor } />
                     <Route exact path='/actors/:operation' component={ ChangeActor } />

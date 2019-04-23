@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { Redirect } from 'react-router-dom';
 
 import '../styles/cards.css';
 
@@ -14,26 +15,75 @@ class Home extends Component {
         this.state = {
             tables: ['users', 'series', 'actors', 'actorsinseries'],
             tablesAlt: ['Users', 'Series', 'Actors', 'Actors In Series'],
+            route: 'http://localhost:8080/',
+            authorized: true,
+            errors: []
+        };
+
+        this.statusCodes = {
+            UNAUTHORIZED: 401,
+            INTERNAL_SERVER_ERROR: 500
         };
 
     }
 
+    componentDidMount() {
+        this.checkAccess();
+    }
+
+    checkAccess() {
+        axios.get(`${this.state.route}`)
+        .then(response => {
+            this.setState({
+                authorized: true,
+                errors: []
+            })
+        })
+        .catch(err => {
+            console.log(err);
+            if (err.response && err.response.status ===
+                this.statusCodes.UNAUTHORIZED) {
+                this.setState({
+                    authorized: false,
+                    errors: err.response.data.errors
+                });
+            }
+        })
+    }
+
     render() {
+
+        let errorBlocks = null;
+        if (!this.state.authorized) {
+            return <Redirect from='/' to='/signin' />
+        }
+        else {
+            errorBlocks = this.state.errors.map((error) =>
+                <div key={ error.msg } className="container">
+                    <div className="alert alert-danger">{ error.msg }</div>
+                </div>
+            );
+        }
 
         let i = 0;
 
         return(
 
             <div>
-                <div className="row cards-row" >
-                    <Card table={ this.state.tables[i] } tableAlt={ this.state.tablesAlt[i++] } />
-                    <Card table={ this.state.tables[i] } tableAlt={ this.state.tablesAlt[i++] } />
-                    <Card table={ this.state.tables[i] } tableAlt={ this.state.tablesAlt[i++] } />
+                <div>
+                    { errorBlocks }
                 </div>
-                <div className="row cards-row">
-                    <Card table={ this.state.tables[i] } tableAlt={ this.state.tablesAlt[i++] } />
-                    <EmptyCard />
-                    <EmptyCard />
+                <div>
+                    <div className="row cards-row" >
+                        <Card table={ this.state.tables[i] } tableAlt={ this.state.tablesAlt[i++] } />
+                        <Card table={ this.state.tables[i] } tableAlt={ this.state.tablesAlt[i++] } />
+                        <Card table={ this.state.tables[i] } tableAlt={ this.state.tablesAlt[i++] } />
+                    </div>
+                    <div className="row cards-row">
+                        <Card table={ this.state.tables[i] } tableAlt={ this.state.tablesAlt[i++] } />
+                        <EmptyCard />
+                        <EmptyCard />
+                    </div>
                 </div>
             </div>
 
