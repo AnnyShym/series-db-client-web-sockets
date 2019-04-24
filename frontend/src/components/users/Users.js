@@ -31,7 +31,7 @@ class Users extends Component {
     }
 
     getUsers() {
-        axios.get(`${this.state.route}${this.state.table}`)
+        axios.get(`${this.state.route}${this.state.table}`, {withCredentials: true})
         .then(response => {
             this.setState({
                 rows: response.data.rows,

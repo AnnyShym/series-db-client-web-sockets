@@ -54,7 +54,8 @@ class ChangeActor extends Component {
     }
 
     getCountries() {
-        axios.get(`${this.state.route}${this.state.table}/countries`)
+        axios.get(`${this.state.route}${this.state.table}/countries`,
+            {withCredentials: true})
         .then(response => {
             this.setState({
                 countries: response.data.countries,
@@ -77,7 +78,7 @@ class ChangeActor extends Component {
 
     getActorInfo() {
         axios.get(`${this.state.route}${this.state.table}/${
-            this.props.match.params.id}`)
+            this.props.match.params.id}`, {withCredentials: true})
         .then(response => {
             this.setState({
                 actor: response.data.row[0],
@@ -173,7 +174,7 @@ class ChangeActor extends Component {
                 this.props.match.params.operation}/${this.props.match.params.id}`;
         }
 
-        axios.post(route, obj)
+        axios.post(route, obj, {withCredentials: true})
         .then(response => {
             this.setState({
                 authorized: true,

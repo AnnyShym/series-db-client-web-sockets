@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import { Redirect } from 'react-router-dom';
+import axios from 'axios';
 
 import '../styles/cards.css';
 
@@ -32,7 +33,7 @@ class Home extends Component {
     }
 
     checkAccess() {
-        axios.get(`${this.state.route}`)
+        axios.get(`${this.state.route}`, {withCredentials: true})
         .then(response => {
             this.setState({
                 authorized: true,

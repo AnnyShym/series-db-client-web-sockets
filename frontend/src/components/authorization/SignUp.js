@@ -60,7 +60,7 @@ class SignUp extends Component {
             password: this.state.administrator.password
         };
 
-        axios.post(`${this.state.route}/signup`, obj)
+        axios.post(`${this.state.route}signup`, obj)
         .then(response => {
             this.setState({
                 signedUp: true,

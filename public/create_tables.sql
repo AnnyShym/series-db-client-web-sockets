@@ -77,13 +77,15 @@ CREATE TRIGGER `TRG_Users_OnUpdate` BEFORE UPDATE ON `users` FOR EACH ROW BEGIN
   SET NEW.password = md5(NEW.password);
 END
 
+DROP TRIGGER IF EXISTS `TRG_Administrators_OnInsert`;
+
 CREATE TRIGGER `TRG_Administrators_OnInsert` BEFORE INSERT ON `administrators` FOR EACH ROW BEGIN
   SET NEW.password = md5(NEW.password);
 END
 
 DROP TRIGGER IF EXISTS `TRG_Administrators_OnUpdate`;
 
-CREATE TRIGGER `TRG_Users_OnUpdate` BEFORE UPDATE ON `administrators` FOR EACH ROW BEGIN
+CREATE TRIGGER `TRG_Administrators_OnUpdate` BEFORE UPDATE ON `administrators` FOR EACH ROW BEGIN
   SET NEW.password = md5(NEW.password);
 END
 

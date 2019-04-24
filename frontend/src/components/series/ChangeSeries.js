@@ -55,7 +55,8 @@ class ChangeSeries extends Component {
     }
 
     getCountries() {
-        axios.get(`${this.state.route}${this.state.table}/countries`)
+        axios.get(`${this.state.route}${this.state.table}/countries`,
+            {withCredentials: true})
         .then(response => {
             this.setState({
                 countries: response.data.countries,
@@ -78,13 +79,13 @@ class ChangeSeries extends Component {
 
     getSeriesInfo() {
         axios.get(`${this.state.route}${this.state.table}/${
-            this.props.match.params.id}`)
+            this.props.match.params.id}`, {withCredentials: true})
         .then(response => {
             this.setState({
                 series: response.data.row[0],
                 authorized: true,
                 errors: []
-            })
+            });
         })
         .catch(err => {
             console.log(err);
@@ -174,7 +175,7 @@ class ChangeSeries extends Component {
                 this.props.match.params.operation}/${this.props.match.params.id}`;
         }
 
-        axios.post(route, obj)
+        axios.post(route, obj, {withCredentials: true})
         .then(response => {
             this.setState({
                 authorized: true,

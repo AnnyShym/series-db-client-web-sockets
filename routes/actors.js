@@ -141,6 +141,9 @@ router.get('/:id', function(req, res) {
           res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
       }
       else {
+          if (row[0].citizenship == null) {
+              row[0].citizenship = 'NULL';
+          }
           res.status(statusCode).json({row: row});
       }
   });

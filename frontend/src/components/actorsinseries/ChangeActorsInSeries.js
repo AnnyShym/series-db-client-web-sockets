@@ -52,7 +52,8 @@ class ChangeActorsInSeries extends Component {
     }
 
     getSeriesInfo() {
-        axios.get(`${this.state.route}${this.state.table}/seriesinfo`)
+        axios.get(`${this.state.route}${this.state.table}/seriesinfo`,
+            {withCredentials: true})
         .then(response => {
             this.setState({
                 seriesInfo: response.data.rows,
@@ -81,7 +82,8 @@ class ChangeActorsInSeries extends Component {
     }
 
     getActorsInfo() {
-        axios.get(`${this.state.route}${this.state.table}/actorsinfo`)
+        axios.get(`${this.state.route}${this.state.table}/actorsinfo`,
+            {withCredentials: true})
         .then(response => {
             this.setState({
                 actorsInfo: response.data.rows,
@@ -111,13 +113,13 @@ class ChangeActorsInSeries extends Component {
 
     getActorsInSeriesInfo() {
         axios.get(`${this.state.route}${this.state.table}/${
-            this.props.match.params.id}`)
+            this.props.match.params.id}`, {withCredentials: true})
         .then(response => {
             this.setState({
                 actorsinseries: response.data.row[0],
                 authorized: true,
                 errors: []
-            })
+            });
         })
         .catch(err => {
             console.log(err);
@@ -168,8 +170,8 @@ class ChangeActorsInSeries extends Component {
         e.preventDefault();
 
         const obj = {
-            id_series: this.state.actorsinseries.id_series,
-            id_actors: this.state.actorsinseries.id_actors,
+            id_series: document.getElementById("exampleFormControlSelect1").value,
+            id_actors: document.getElementById("exampleFormControlSelect2").value
         };
 
         let route = null;
@@ -182,7 +184,7 @@ class ChangeActorsInSeries extends Component {
                 this.props.match.params.operation}/${this.props.match.params.id}`;
         }
 
-        axios.post(route, obj)
+        axios.post(route, obj, {withCredentials: true})
         .then(response => {
             this.setState({
                 authorized: true,
@@ -261,14 +263,12 @@ class ChangeActorsInSeries extends Component {
                         <div className="form-group">
                             <label htmlFor="exampleFormControlInput1">{ this.state.columnsAlt[1] }:</label>
                             <select name={ this.state.columns[1] } value={ this.state.actorsinseries.id_series } onChange= { this.onChangeSeriesId } className="form-control" id="exampleFormControlSelect1">
-                                <option key={ 'NULL' } value='NULL'></option>
                                 { seriesOptions }
                             </select>
                         </div>
                         <div className="form-group">
                             <label htmlFor="exampleFormControlInput2">{ this.state.columnsAlt[2] }:</label>
                             <select name={ this.state.columns[2] } value={ this.state.actorsinseries.id_actors } onChange= { this.onChangeActorsId } className="form-control" id="exampleFormControlSelect2">
-                                <option key={ 'NULL' } value='NULL'></option>
                                 { actorsOptions }
                             </select>
                         </div>

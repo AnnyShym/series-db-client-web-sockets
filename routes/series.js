@@ -104,8 +104,6 @@ router.post('/update/:id', urlencodedParser, function(req, res) {
     }
     else {
 
-        console.log(req.body.rating);
-
         if (req.body.country != 'NULL') {
             req.body.country = `"${req.body.country}"`;
         }
@@ -139,6 +137,12 @@ router.get('/:id', function(req, res) {
           res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
       }
       else {
+          if (row[0].rating == null) {
+              row[0].rating = 'NULL';
+          }
+          if (row[0].country == null) {
+              row[0].country = 'NULL';
+          }
           res.status(statusCode).json({row: row});
       }
   });

@@ -46,7 +46,7 @@ class ChangeUser extends Component {
 
     getUserInfo() {
         axios.get(`${this.state.route}${this.state.table}/${
-            this.props.match.params.id}`)
+            this.props.match.params.id}`, {withCredentials: true})
         .then(response => {
             this.setState({
                 user: {
@@ -120,7 +120,7 @@ class ChangeUser extends Component {
                 this.props.match.params.operation}/${this.props.match.params.id}`;
         }
 
-        axios.post(route, obj)
+        axios.post(route, obj, {withCredentials: true})
         .then(response => {
             this.setState({
                 authorized: true,

@@ -29,7 +29,8 @@ class DeleteActorsInSeries extends Component {
     }
 
     deleteActorsInSeries(actorsInSeriesId) {
-        axios.post(`${this.state.route}${this.state.table}/delete/${actorsInSeriesId}`)
+        axios.post(`${this.state.route}${this.state.table}/delete/${actorsInSeriesId}`,
+            {withCredentials: true})
         .then(response => {
             this.setState({
                 authorized: true,
@@ -64,7 +65,7 @@ class DeleteActorsInSeries extends Component {
                 this.props.match.params.id}` } to='/signin' />
         }
         else {
-            if (this.state.changed) {
+            if (this.state.deleted) {
                 return <Redirect from={ `/${this.state.table}/delete/${
                     this.props.match.params.id}` } to={ `/${this.state.table}` } />
             }

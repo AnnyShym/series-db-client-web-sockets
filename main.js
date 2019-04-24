@@ -6,12 +6,12 @@ const fs = require('fs');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
+const config = require('./config');
 
 const app = express();
-app.set('view engine', 'ejs');
 const urlencodedParser = bodyParser.urlencoded({ extended: false });
 app.use(bodyParser.json());
-app.use(cors());
+app.use(cors({credentials: true, origin: 'http://localhost:3000'}));
 app.use(cookieParser());
 
 // Some server info
@@ -87,25 +87,17 @@ app.use(expressValidator({
 }));
 
 app.use(function (req, res, next) {
-    res.header("Access-Control-Allow-Methods", "GET, POST");
-    res.header("Access-Control-Allow-Headers", "Content-Type");
-    next();
-});
+    if (req.originalUrl != "/signup" && req.originalUrl != "/signin") {
 
-const key = "secretKey";
-let cookieJwt = null;
+        let cookieJwt = req.cookies.auth;
 
-app.use(function (request, response, next) {
-    if (request.originalUrl != "/signup" && request.originalUrl != "/signin") {
-
-        cookieJwt = request.cookies.auth;
-
-        jwt.verify(cookieJwt, key, function(err, decoded) {
-            try {
-                next();
+        jwt.verify(cookieJwt, config.KEY, function(err, decoded) {
+            console.log(err);
+            if (err) {
+                res.status(UNAUTHORIZED).json({errors: [{ msg: UNAUTHORIZED_MSG }]});
             }
-            catch (err) {
-                response.status(UNAUTHORIZED).json({errors: UNAUTHORIZED_MSG});
+            else {
+                next();
             }
         });
 
@@ -232,18 +224,18 @@ global.INTERNAL_SERVER_ERROR = INTERNAL_SERVER_ERROR;
 
 global.INTERNAL_ERROR_MSG = INTERNAL_ERROR_MSG;
 
-// Customizing routes handlers
+const signUp = require(`${ROUTES_DIR}signup`);
+const signIn = require(`${ROUTES_DIR}signin`);
+app.post('/signup', signUp.signUp);
+app.post('/signin', signIn.signIn);
+
 let routerTables = [];
 for (let i = 0; i < TABLES.length; i++) {
   routerTables.push(require(`${ROUTES_DIR}${TABLES[i]}`));
   app.use(`/${TABLES[i]}`, routerTables[i]);
 }
 
-routerTables.push(require(`${ROUTES_DIR}authentification`));
-app.use('/signup', routerTables[routerTables.length - 1]);
-app.use('/signin', routerTables[routerTables.length - 1]);
-
-router.get('/', function(req, res) {
+app.get('/', function(req, res) {
     res.sendStatus(NO_CONTENT);
 });
 

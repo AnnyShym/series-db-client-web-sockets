@@ -60,12 +60,13 @@ class SignIn extends Component {
             password: this.state.administrator.password
         };
 
-        axios.post(`${this.state.route}/signin`, obj)
+        axios.post(`${this.state.route}signin`, obj, {withCredentials: true})
         .then(response => {
             this.setState({
                 signedIn: true,
                 errors: []
-            })
+            });
+            console.log(response);
         })
         .catch(err => {
             console.log(err);
