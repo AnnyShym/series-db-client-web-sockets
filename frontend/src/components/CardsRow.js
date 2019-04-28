@@ -6,17 +6,6 @@ import Card from './Card';
 import EmptyCard from './EmptyCard';
 
 class Home extends Component {
-
-    constructor(props) {
-
-        super(props);
-
-        this.state = {
-            cardsInRow: 3,
-        };
-
-    }
-
     render() {
 
         let i = 0;
@@ -39,7 +28,6 @@ class Home extends Component {
         );
 
     }
-
 }
 
 export default Home;

@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 
+const main = require('../main');
+
 // Array of possible countries
 const COUNTRIES = require('../modules/countries');
 
@@ -31,15 +33,16 @@ const MSG_LAST_NAME_NOT_EMPTY = "Last name is required!";
 const MSG_LAST_NAME_MAX = `Last name must contain not more than ${NAME_MAX} symbols!`;
 const MSG_LAST_NAME_PATTERN = 'Invalid last name!';
 
+// The handlers
 router.get('/countries', function(req, res) {
-    res.status(OK).json({countries: COUNTRIES});
+    res.status(main.OK).json({countries: COUNTRIES});
 });
 
 router.post('/delete/:id', function(req, res) {
-    deleteRow(TABLE, `id = ${req.params.id}`, function (err, statusCode) {
+    main.deleteRow(TABLE, `id = ${req.params.id}`, function (err, statusCode,
+        msg) {
         if (err) {
-            console.log(err);
-            res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
+            res.status(statusCode).json({errors: [{ msg: msg }]});
         }
         else {
             res.sendStatus(statusCode);
@@ -49,42 +52,42 @@ router.post('/delete/:id', function(req, res) {
 
 function validateRequest(req) {
 
-  req.check('name')
-      .trim()
-      .notEmpty().withMessage(MSG_NAME_NOT_EMPTY)
-      .isLength({ max: NAME_MAX }).withMessage(MSG_NAME_MAX)
-      .matches(NAME_PATTERN, 'i')
-      .withMessage(MSG_NAME_PATTERN);
+    req.check('name')
+        .trim()
+        .notEmpty().withMessage(MSG_NAME_NOT_EMPTY)
+        .isLength({ max: NAME_MAX }).withMessage(MSG_NAME_MAX)
+        .matches(NAME_PATTERN, 'i')
+        .withMessage(MSG_NAME_PATTERN);
 
-  req.check('middle_name')
-      .trim()
-      .isLength({ max: NAME_MAX }).withMessage(MSG_MIDDLE_NAME_MAX)
+    req.check('middle_name')
+        .trim()
+        .isLength({ max: NAME_MAX }).withMessage(MSG_MIDDLE_NAME_MAX)
 
-  if (req.body.middle_name != '') {
-      req.check('middle_name')
-      .matches(MIDDLE_NAME_PATTERN, 'i')
-      .withMessage(MSG_MIDDLE_NAME_PATTERN);
-  }
+    if (req.body.middle_name !== '') {
+        req.check('middle_name')
+            .matches(MIDDLE_NAME_PATTERN, 'i')
+            .withMessage(MSG_MIDDLE_NAME_PATTERN);
+    }
 
-  req.check('last_name')
-      .trim()
-      .notEmpty().withMessage(MSG_LAST_NAME_NOT_EMPTY)
-      .isLength({ max: NAME_MAX }).withMessage(MSG_LAST_NAME_MAX)
-      .matches(LAST_NAME_PATTERN, 'i')
-      .withMessage(MSG_LAST_NAME_PATTERN);
+    req.check('last_name')
+        .trim()
+        .notEmpty().withMessage(MSG_LAST_NAME_NOT_EMPTY)
+        .isLength({ max: NAME_MAX }).withMessage(MSG_LAST_NAME_MAX)
+        .matches(LAST_NAME_PATTERN, 'i')
+        .withMessage(MSG_LAST_NAME_PATTERN);
 
-  return req.validationErrors();
+    return req.validationErrors();
 
 }
 
-router.post('/insert', urlencodedParser, function(req, res) {
+router.post('/insert', main.urlencodedParser, function(req, res) {
     const errors = validateRequest(req);
     if (errors) {
-        res.status(BAD_REQUEST).json({errors: errors});
+        res.status(main.BAD_REQUEST).json({errors: errors});
     }
     else {
 
-        if (req.body.citizenship != 'NULL') {
+        if (req.body.citizenship !== 'NULL') {
             req.body.citizenship = `"${req.body.citizenship}"`;
         }
 
@@ -92,10 +95,9 @@ router.post('/insert', urlencodedParser, function(req, res) {
             req.body.middle_name}", last_name = "${
             req.body.last_name}", citizenship = ${req.body.citizenship}`;
 
-        insertRow(TABLE, newValues, function (err, statusCode) {
+        main.insertRow(TABLE, newValues, function (err, statusCode, msg) {
             if (err) {
-                console.log(err);
-                res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
+                res.status(statusCode).json({errors: [{ msg: msg }]});
             }
             else {
                 res.sendStatus(statusCode);
@@ -105,14 +107,14 @@ router.post('/insert', urlencodedParser, function(req, res) {
     }
 });
 
-router.post('/update/:id', urlencodedParser, function(req, res) {
+router.post('/update/:id', main.urlencodedParser, function(req, res) {
     const errors = validateRequest(req);
     if (errors) {
-        res.status(BAD_REQUEST).json({errors: errors});
+        res.status(main.BAD_REQUEST).json({errors: errors});
     }
     else {
 
-        if (req.body.citizenship != 'NULL') {
+        if (req.body.citizenship !== 'NULL') {
             req.body.citizenship = `"${req.body.citizenship}"`;
         }
 
@@ -120,11 +122,10 @@ router.post('/update/:id', urlencodedParser, function(req, res) {
             req.body.middle_name}", last_name = "${
             req.body.last_name}", citizenship = ${req.body.citizenship}`;
 
-        updateRow(TABLE, newValues, `id = ${req.params.id}`,
-            function (err, statusCode) {
+        main.updateRow(TABLE, newValues, `id = ${req.params.id}`,
+            function (err, statusCode, msg) {
             if (err) {
-                console.log(err);
-                res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
+                res.status(statusCode).json({errors: [{ msg: msg }]});
             }
             else {
                 res.sendStatus(statusCode);
@@ -135,25 +136,24 @@ router.post('/update/:id', urlencodedParser, function(req, res) {
 });
 
 router.get('/:id', function(req, res) {
-  selectRow(TABLE, `id = ${req.params.id}`, function (err, statusCode, row) {
-      if (err) {
-          console.log(err);
-          res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
-      }
-      else {
-          if (row[0].citizenship == null) {
-              row[0].citizenship = 'NULL';
-          }
-          res.status(statusCode).json({row: row});
-      }
-  });
+    main.selectRow(TABLE, `id = ${req.params.id}`, function (err, statusCode,
+        msg, row) {
+        if (err) {
+            res.status(statusCode).json({errors: [{ msg: msg }]});
+        }
+        else {
+            if (row[0].citizenship === null) {
+                row[0].citizenship = 'NULL';
+            }
+            res.status(statusCode).json({row: row});
+        }
+    });
 });
 
 router.get('/', function(req, res) {
-    selectAllRows(TABLE, ORDER_BY, function (err, statusCode, rows) {
+    main.selectAllRows(TABLE, ORDER_BY, function (err, statusCode, msg, rows) {
         if (err) {
-            console.log(err);
-            res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
+            res.status(statusCode).json({errors: [{ msg: msg }]});
         }
         else {
             res.status(statusCode).json({rows: rows});

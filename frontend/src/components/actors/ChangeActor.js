@@ -101,8 +101,9 @@ class ChangeActor extends Component {
                     errors: err.response.data.errors
                 });
             }
-            if (err.response && err.response.status ===
-                this.statusCodes.INTERNAL_SERVER_ERROR) {
+            if (err.response && (err.response.status ===
+                this.statusCodes.INTERNAL_SERVER_ERROR ||
+                err.response.status === this.statusCodes.BAD_REQUEST)) {
                 this.setState({
                     actor: {
                         name: '',

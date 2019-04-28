@@ -35,6 +35,8 @@ const INTERNAL_SERVER_ERROR = 500
 
 // Status messages
 const INTERNAL_ERROR_MSG = 'Oops, some internal issues occured... Please, try again!';
+const NOT_UNIQUE_MSG = 'Such record already exists!';
+const INVALID_ID_MSG = 'Invalid identifier!';
 const UNAUTHORIZED_MSG = 'Please, sign in as administrator first!';
 
 // Logs
@@ -86,13 +88,13 @@ app.use(expressValidator({
   }
 }));
 
+// The middleware for checking the access rights (jwt)
 app.use(function (req, res, next) {
-    if (req.originalUrl != "/signup" && req.originalUrl != "/signin") {
+    if (req.originalUrl !== "/signup" && req.originalUrl !== "/signin") {
 
         let cookieJwt = req.cookies.auth;
 
         jwt.verify(cookieJwt, config.KEY, function(err, decoded) {
-            console.log(err);
             if (err) {
                 res.status(UNAUTHORIZED).json({errors: [{ msg: UNAUTHORIZED_MSG }]});
             }
@@ -112,28 +114,33 @@ function selectAllRows(table, orderBy, callback) {
     const sql = `SELECT * FROM ${table} ${orderBy};`;
     const query = db.query(sql, (err, rows) => {
         if (err) {
-            callback(err, INTERNAL_SERVER_ERROR, null);
+            console.log(err);
+            callback(err, INTERNAL_SERVER_ERROR, INTERNAL_ERROR_MSG, null);
         }
         else {
-            callback(null, OK, rows);
+            callback(null, OK, null, rows);
         }
     });
 }
 
 function selectAllForIntermediateTable(table, table1ForJoin, table2ForJoin,
-    what, tableColumn1, tableColumn2, table1Column, table2Column, callback) {
+    what, tableColumn1, tableColumn2, table1Column, table2Column, orderBy,
+    callback) {
 
     const sql = `SELECT ${what} FROM ${table
-    } INNER JOIN ${table1ForJoin} ON ${table}.${tableColumn1} = ${table1ForJoin}.${table1Column
-    } INNER JOIN ${table2ForJoin} ON ${table}.${tableColumn2} = ${table2ForJoin}.${table2Column
-    };`;
+    } INNER JOIN ${table1ForJoin} ON ${table}.${tableColumn1
+    } = ${table1ForJoin}.${table1Column
+    } INNER JOIN ${table2ForJoin} ON ${table}.${tableColumn2
+    } = ${table2ForJoin}.${table2Column
+    } ${orderBy};`;
 
     const query = db.query(sql, (err, rows) => {
         if (err) {
-            callback(err, INTERNAL_SERVER_ERROR, null);
+            console.log(err);
+            callback(err, INTERNAL_SERVER_ERROR, INTERNAL_ERROR_MSG, null);
         }
         else {
-            callback(null, OK, rows);
+            callback(null, OK, null, rows);
         }
     });
 
@@ -143,10 +150,21 @@ function selectRow(table, condition, callback) {
     const sql = `SELECT * FROM ${table} WHERE ${condition};`;
     const query = db.query(sql, (err, row) => {
         if (err) {
-            callback(err, INTERNAL_SERVER_ERROR, null);
+            if (err.code === 'ER_BAD_FIELD_ERROR') {
+                callback(err, BAD_REQUEST, INVALID_ID_MSG, null);
+            }
+            else {
+                console.log(err);
+                callback(err, INTERNAL_SERVER_ERROR, INTERNAL_ERROR_MSG, null);
+            }
         }
         else {
-            callback(null, OK, row);
+            if (row.length === 0) {
+                callback(true, BAD_REQUEST, INVALID_ID_MSG, null);
+            }
+            else {
+                callback(null, OK, null, row);
+            }
         }
     });
 }
@@ -155,10 +173,11 @@ function selectPartialInfo(table, what, orderBy, callback) {
     const sql = `SELECT ${what} FROM ${table} ${orderBy};`;
     const query = db.query(sql, (err, rows) => {
         if (err) {
-            callback(err, INTERNAL_SERVER_ERROR, null);
+            console.log(err);
+            callback(err, INTERNAL_SERVER_ERROR, INTERNAL_ERROR_MSG, null);
         }
         else {
-            callback(null, OK, rows);
+            callback(null, OK, null, rows);
         }
     });
 }
@@ -167,10 +186,16 @@ function insertRow(table, newValues, callback) {
     const sql = `INSERT INTO ${table} SET ${newValues};`;
     const query = db.query(sql, (err, results) => {
         if (err) {
-            callback(err, INTERNAL_SERVER_ERROR);
+            if (err.code === 'ER_DUP_ENTRY') {
+                callback(err, BAD_REQUEST, NOT_UNIQUE_MSG);
+            }
+            else {
+                console.log(err);
+                callback(err, INTERNAL_SERVER_ERROR, INTERNAL_ERROR_MSG);
+            }
         }
         else {
-            callback(null, CREATED);
+            callback(null, CREATED, null);
         }
     });
 }
@@ -179,10 +204,16 @@ function deleteRow(table, condition, callback) {
     const sql = `DELETE FROM ${table} WHERE ${condition};`;
     const query = db.query(sql, (err, results) => {
         if (err) {
-            callback(err, INTERNAL_SERVER_ERROR);
+            if (err.code === 'ER_BAD_FIELD_ERROR') {
+                callback(err, BAD_REQUEST, INVALID_ID_MSG);
+            }
+            else {
+                console.log(err);
+                callback(err, INTERNAL_SERVER_ERROR, INTERNAL_ERROR_MSG);
+            }
         }
         else {
-            callback(null, NO_CONTENT);
+            callback(null, NO_CONTENT, null);
         }
     });
 }
@@ -191,43 +222,56 @@ function updateRow(table, newValues, condition, callback) {
     const sql = `UPDATE ${table} SET ${newValues} WHERE ${condition};`;
     const query = db.query(sql, (err, results) => {
         if (err) {
-            callback(err, INTERNAL_SERVER_ERROR);
+            if (err.code === 'ER_BAD_FIELD_ERROR') {
+                callback(err, BAD_REQUEST, INVALID_ID_MSG);
+            }
+            else {
+                if (err.code === 'ER_DUP_ENTRY') {
+                    callback(err, BAD_REQUEST, NOT_UNIQUE_MSG);
+                }
+                else {
+                    console.log(err);
+                    callback(err, INTERNAL_SERVER_ERROR, INTERNAL_ERROR_MSG);
+                }
+            }
         }
         else {
-            callback(null, NO_CONTENT);
+            callback(null, NO_CONTENT, null);
         }
     });
 }
 
-// Indicating global data
-global.urlencodedParser = urlencodedParser;
-global.db = db;
-global.jwt = jwt;
-global.expressValidator = expressValidator;
+// Indicating the data for exporting
+module.exports.urlencodedParser = urlencodedParser;
+module.exports.db = db;
+module.exports.jwt = jwt;
 
-global.selectAllRows = selectAllRows;
-global.selectAllForIntermediateTable = selectAllForIntermediateTable;
-global.selectRow = selectRow;
-global.selectPartialInfo = selectPartialInfo;
-global.insertRow = insertRow;
-global.deleteRow = deleteRow;
-global.updateRow = updateRow;
+module.exports.DB_NAME = DB_NAME;
 
-global.DB_NAME = DB_NAME;
+module.exports.selectAllRows = selectAllRows;
+module.exports.selectAllForIntermediateTable = selectAllForIntermediateTable;
+module.exports.selectRow = selectRow;
+module.exports.selectPartialInfo = selectPartialInfo;
+module.exports.insertRow = insertRow;
+module.exports.deleteRow = deleteRow;
+module.exports.updateRow = updateRow;
 
-global.OK = OK;
-global.CREATED = CREATED;
-global.NO_CONTENT = NO_CONTENT;
-global.BAD_REQUEST = BAD_REQUEST;
-global.UNAUTHORIZED = UNAUTHORIZED;
-global.INTERNAL_SERVER_ERROR = INTERNAL_SERVER_ERROR;
+module.exports.OK = OK;
+module.exports.CREATED = CREATED;
+module.exports.NO_CONTENT = NO_CONTENT;
+module.exports.BAD_REQUEST = BAD_REQUEST;
+module.exports.UNAUTHORIZED = UNAUTHORIZED;
+module.exports.INTERNAL_SERVER_ERROR = INTERNAL_SERVER_ERROR;
 
-global.INTERNAL_ERROR_MSG = INTERNAL_ERROR_MSG;
+module.exports.INTERNAL_ERROR_MSG = INTERNAL_ERROR_MSG;
+module.exports.NOT_UNIQUE_MSG = NOT_UNIQUE_MSG;
+module.exports.INVALID_ID_MSG = INVALID_ID_MSG;
 
-const signUp = require(`${ROUTES_DIR}signup`);
-const signIn = require(`${ROUTES_DIR}signin`);
-app.post('/signup', signUp.signUp);
-app.post('/signin', signIn.signIn);
+// Customizing the routes
+const signUpModule = require(`${ROUTES_DIR}signup`);
+const signInModule = require(`${ROUTES_DIR}signin`);
+app.post('/signup', signUpModule.signUp);
+app.post('/signin', signInModule.signIn);
 
 let routerTables = [];
 for (let i = 0; i < TABLES.length; i++) {
@@ -235,6 +279,7 @@ for (let i = 0; i < TABLES.length; i++) {
   app.use(`/${TABLES[i]}`, routerTables[i]);
 }
 
+// The handler for the root route
 app.get('/', function(req, res) {
     res.sendStatus(NO_CONTENT);
 });
@@ -242,4 +287,4 @@ app.get('/', function(req, res) {
 // Starting to listen
 app.listen(PORT, () => {
     console.log(SERVER_LOG);
-});;
+});

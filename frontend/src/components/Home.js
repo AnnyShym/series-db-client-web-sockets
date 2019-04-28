@@ -23,7 +23,6 @@ class Home extends Component {
 
         this.statusCodes = {
             UNAUTHORIZED: 401,
-            INTERNAL_SERVER_ERROR: 500
         };
 
     }
@@ -54,16 +53,8 @@ class Home extends Component {
 
     render() {
 
-        let errorBlocks = null;
         if (!this.state.authorized) {
             return <Redirect from='/' to='/signin' />
-        }
-        else {
-            errorBlocks = this.state.errors.map((error) =>
-                <div key={ error.msg } className="container">
-                    <div className="alert alert-danger">{ error.msg }</div>
-                </div>
-            );
         }
 
         let i = 0;
@@ -71,20 +62,15 @@ class Home extends Component {
         return(
 
             <div>
-                <div>
-                    { errorBlocks }
+                <div className="row cards-row" >
+                    <Card table={ this.state.tables[i] } tableAlt={ this.state.tablesAlt[i++] } />
+                    <Card table={ this.state.tables[i] } tableAlt={ this.state.tablesAlt[i++] } />
+                    <Card table={ this.state.tables[i] } tableAlt={ this.state.tablesAlt[i++] } />
                 </div>
-                <div>
-                    <div className="row cards-row" >
-                        <Card table={ this.state.tables[i] } tableAlt={ this.state.tablesAlt[i++] } />
-                        <Card table={ this.state.tables[i] } tableAlt={ this.state.tablesAlt[i++] } />
-                        <Card table={ this.state.tables[i] } tableAlt={ this.state.tablesAlt[i++] } />
-                    </div>
-                    <div className="row cards-row">
-                        <Card table={ this.state.tables[i] } tableAlt={ this.state.tablesAlt[i++] } />
-                        <EmptyCard />
-                        <EmptyCard />
-                    </div>
+                <div className="row cards-row">
+                    <Card table={ this.state.tables[i] } tableAlt={ this.state.tablesAlt[i++] } />
+                    <EmptyCard />
+                    <EmptyCard />
                 </div>
             </div>
 

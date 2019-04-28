@@ -18,6 +18,7 @@ class DeleteActorsInSeries extends Component {
         }
 
         this.statusCodes = {
+            BAD_REQUEST: 400,
             UNAUTHORIZED: 401,
             INTERNAL_SERVER_ERROR: 500
         };
@@ -30,7 +31,7 @@ class DeleteActorsInSeries extends Component {
 
     deleteActorsInSeries(actorsInSeriesId) {
         axios.post(`${this.state.route}${this.state.table}/delete/${actorsInSeriesId}`,
-            {withCredentials: true})
+            {}, {withCredentials: true})
         .then(response => {
             this.setState({
                 authorized: true,

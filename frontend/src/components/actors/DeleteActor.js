@@ -17,6 +17,7 @@ class DeleteActor extends Component {
         }
 
         this.statusCodes = {
+            BAD_REQUEST: 400,
             UNAUTHORIZED: 401,
             INTERNAL_SERVER_ERROR: 500
         };
@@ -29,7 +30,7 @@ class DeleteActor extends Component {
 
     deleteActor(actorId) {
         axios.post(`${this.state.route}${this.state.table}/delete/${actorId}`,
-            {withCredentials: true})
+            {}, {withCredentials: true})
         .then(response => {
             this.setState({
                 authorized: true,

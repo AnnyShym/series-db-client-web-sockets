@@ -1,3 +1,6 @@
+const main = require('../main');
+
+// Some information for queries
 const TABLE = 'administrators';
 
 // Validation patterns
@@ -44,17 +47,16 @@ module.exports = {
     signUp: (req, res) => {
         const errors = validateRequest(req);
         if (errors) {
-            res.status(BAD_REQUEST).json({errors: errors});
+            res.status(main.BAD_REQUEST).json({errors: errors});
         }
         else {
 
             const newValues = `login = "${req.body.login}", password = "${
                 req.body.password}"`;
 
-            insertRow(TABLE, newValues, function (err, statusCode) {
+            main.insertRow(TABLE, newValues, function (err, statusCode, msg) {
                 if (err) {
-                    console.log(err);
-                    res.status(statusCode).json({errors: [{ msg: INTERNAL_ERROR_MSG }]});
+                    res.status(statusCode).json({errors: [{ msg: msg }]});
                 }
                 else {
                     res.sendStatus(statusCode);
