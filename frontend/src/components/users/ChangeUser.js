@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { Redirect } from 'react-router-dom';
-import axios from 'axios';
+import socketIOClient from 'socket.io-client';
 
 class ChangeUser extends Component {
 
@@ -10,7 +10,7 @@ class ChangeUser extends Component {
 
         this.state = {
             table: 'users',
-            route: 'http://localhost:8080/',
+            endpoint: 'http://localhost:8080/',
             columns: ['id', 'login', 'password'],
             columnsAlt: ['#', 'Login', 'Password'],
             user: {
@@ -23,6 +23,9 @@ class ChangeUser extends Component {
         }
 
         this.statusCodes = {
+            OK: 200,
+            CREATED: 201,
+            NO_CONTENT: 204,
             BAD_REQUEST: 400,
             UNAUTHORIZED: 401,
             INTERNAL_SERVER_ERROR: 500
@@ -36,52 +39,59 @@ class ChangeUser extends Component {
 
         this.onSubmit = this.onSubmit.bind(this);
 
+        this.socket = socketIOClient(this.state.endpoint);
+
     }
 
     componentDidMount() {
         if (this.props.match.params.operation === this.opUpdate) {
-            this.getUserInfo();
+            this.getUserInfo(this.props.match.params.id);
         }
     }
 
-    getUserInfo() {
-        axios.get(`${this.state.route}${this.state.table}/${
-            this.props.match.params.id}`, {withCredentials: true})
-        .then(response => {
-            this.setState({
-                user: {
-                    login: response.data.row[0].login,
-                    password: ''
-                },
-                authorized: true,
-                errors: []
-            })
-        })
-        .catch(err => {
-            console.log(err);
-            if (err.response && err.response.status ===
-                this.statusCodes.UNAUTHORIZED) {
+    getUserInfo(userId) {
+
+        const token = document.cookie.replace(/(?:(?:^|.*;\s*)auth\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+
+        this.socket.emit('get user', userId, token);
+        this.socket.on('get user', (res) => {
+            if (res.statusCode === this.statusCodes.OK) {
                 this.setState({
                     user: {
-                        login: '',
+                        login: res.row[0].login,
                         password: ''
                     },
-                    authorized: false,
-                    errors: err.response.data.errors
-                });
+                    authorized: true,
+                    errors: []
+                })
             }
-            if (err.response && (err.response.status ===
-                this.statusCodes.INTERNAL_SERVER_ERROR ||
-                err.response.status === this.statusCodes.BAD_REQUEST)) {
-                this.setState({
-                    user: {
-                        login: '',
-                        password: ''
-                    },
-                    errors: err.response.data.errors
-                });
+            else {
+                console.log(`${res.statusCode}: ${res.errors}`);
+                if (res.statusCode === this.statusCodes.UNAUTHORIZED) {
+                    this.setState({
+                        user: {
+                            login: '',
+                            password: ''
+                        },
+                        authorized: false,
+                        errors: res.errors
+                    });
+                }
+                if (res.statusCode === this.statusCodes.INTERNAL_SERVER_ERROR ||
+                    res.statusCode === this.statusCodes.BAD_REQUEST) {
+                    this.setState({
+                        actor: {
+                            user: {
+                                login: '',
+                                password: ''
+                            },
+                        },
+                        errors: res.errors
+                    });
+                }
             }
-        })
+        });
+
     }
 
     onChangeLogin(e) {
@@ -111,43 +121,45 @@ class ChangeUser extends Component {
             password: this.state.user.password
         };
 
-        let route = null;
+        let id = null;
         if (this.props.match.params.operation === this.opInsert) {
-            route = `${this.state.route}${this.state.table}/${
-                this.props.match.params.operation}`
+            id = null;
         }
         else {
-            route = `${this.state.route}${this.state.table}/${
-                this.props.match.params.operation}/${this.props.match.params.id}`;
+            id = this.props.match.params.id;
         }
 
-        axios.post(route, obj, {withCredentials: true})
-        .then(response => {
-            this.setState({
-                authorized: true,
-                changed: true,
-                errors: []
-            })
-        })
-        .catch(err => {
-            console.log(err);
-            if (err.response && err.response.status ===
-                this.statusCodes.UNAUTHORIZED) {
+        const token = document.cookie.replace(/(?:(?:^|.*;\s*)auth\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+
+        this.socket.emit(`${this.props.match.params.operation} user`, id, obj,
+            token);
+        this.socket.on(`${this.props.match.params.operation} user`, (res) => {
+            if (res.statusCode === this.statusCodes.CREATED ||
+                res.statusCode === this.statusCodes.NO_CONTENT) {
                 this.setState({
-                    authorized: false,
-                    changed: false,
-                    errors: err.response.data.errors
-                });
+                    authorized: true,
+                    changed: true,
+                    errors: []
+                })
             }
-            if (err.response && (err.response.status ===
-                this.statusCodes.INTERNAL_SERVER_ERROR ||
-                err.response.status === this.statusCodes.BAD_REQUEST)) {
-                this.setState({
-                    changed: false,
-                    errors: err.response.data.errors
-                });
+            else {
+                console.log(`${res.statusCode}: ${res.errors}`);
+                if (res.statusCode === this.statusCodes.UNAUTHORIZED) {
+                    this.setState({
+                        authorized: false,
+                        changed: false,
+                        errors: res.errors
+                    });
+                }
+                if (res.statusCode === this.statusCodes.INTERNAL_SERVER_ERROR ||
+                    res.statusCode === this.statusCodes.BAD_REQUEST) {
+                    this.setState({
+                        changed: false,
+                        errors: res.errors
+                    });
+                }
             }
-        })
+        });
 
     }
 

@@ -1,18 +1,21 @@
 const express = require('express');
 const mysql = require('mysql');
-const bodyParser = require('body-parser');
 const expressValidator = require('express-validator');
 const fs = require('fs');
 const cors = require('cors');
-const cookieParser = require('cookie-parser');
+const cookie = require('cookie');
 const jwt = require('jsonwebtoken');
+const http = require('http');
+const socketIO = require('socket.io');
+
 const config = require('./config');
+const COUNTRIES = require('./modules/countries');
 
 const app = express();
-const urlencodedParser = bodyParser.urlencoded({ extended: false });
-app.use(bodyParser.json());
+var server = http.Server(app);
+var io = socketIO(server);
+
 app.use(cors({credentials: true, origin: 'http://localhost:3000'}));
-app.use(cookieParser());
 
 // Some server info
 const PORT = 8080;
@@ -69,45 +72,6 @@ for (let i in arrSql) {
         }
     });
 }
-
-// Customizing the validator
-app.use(expressValidator({
-    errorFormatter: function(param, msg, value) {
-        var namespace = param.split('.')
-        , root    = namespace.shift()
-        , formParam = root;
-
-    while(namespace.length) {
-        formParam += '[' + namespace.shift() + ']';
-    }
-    return {
-        param : formParam,
-        msg   : msg,
-        value : value
-    };
-  }
-}));
-
-// The middleware for checking the access rights (jwt)
-app.use(function (req, res, next) {
-    if (req.originalUrl !== "/signup" && req.originalUrl !== "/signin") {
-
-        let cookieJwt = req.cookies.auth;
-
-        jwt.verify(cookieJwt, config.KEY, function(err, decoded) {
-            if (err) {
-                res.status(UNAUTHORIZED).json({errors: [{ msg: UNAUTHORIZED_MSG }]});
-            }
-            else {
-                next();
-            }
-        });
-
-    }
-    else {
-        next();
-    }
-});
 
 // Some functions for export
 function selectAllRows(table, orderBy, callback) {
@@ -242,7 +206,6 @@ function updateRow(table, newValues, condition, callback) {
 }
 
 // Indicating the data for exporting
-module.exports.urlencodedParser = urlencodedParser;
 module.exports.db = db;
 module.exports.jwt = jwt;
 
@@ -267,24 +230,234 @@ module.exports.INTERNAL_ERROR_MSG = INTERNAL_ERROR_MSG;
 module.exports.NOT_UNIQUE_MSG = NOT_UNIQUE_MSG;
 module.exports.INVALID_ID_MSG = INVALID_ID_MSG;
 
-// Customizing the routes
-const signUpModule = require(`${ROUTES_DIR}signup`);
-const signInModule = require(`${ROUTES_DIR}signin`);
-app.post('/signup', signUpModule.signUp);
-app.post('/signin', signInModule.signIn);
+// Customizing the validator
+app.use(expressValidator({
+    errorFormatter: function(param, msg, value) {
+        var namespace = param.split('.')
+        , root    = namespace.shift()
+        , formParam = root;
 
-let routerTables = [];
-for (let i = 0; i < TABLES.length; i++) {
-  routerTables.push(require(`${ROUTES_DIR}${TABLES[i]}`));
-  app.use(`/${TABLES[i]}`, routerTables[i]);
-}
+    while(namespace.length) {
+        formParam += '[' + namespace.shift() + ']';
+    }
+    return {
+        param : formParam,
+        msg   : msg,
+        value : value
+    };
+  }
+}));
 
-// The handler for the root route
-app.get('/', function(req, res) {
-    res.sendStatus(NO_CONTENT);
+const { signUp } = require('./routes/signup');
+const { signIn } = require('./routes/signin');
+const { deleteActor, insertActor, updateActor,
+    getActor, getActors } = require('./routes/actors');
+const { deleteUser, insertUser, updateUser,
+    getUser, getUsers } = require('./routes/users');
+
+io.on('connection', (socket) => {
+
+    socket.on('sign up', (administrator) => {
+        signUp(administrator, (res) => {
+            socket.emit('sign up', res);
+        });
+    });
+
+    socket.on('sign in', (administrator) => {
+        signIn(administrator, (res) => {
+            socket.emit('sign in', res);
+        });
+    });
+
+    socket.on('get countries', (token) => {
+        jwt.verify(token, config.KEY, function(err, decoded) {
+            if (err) {
+                socket.emit('get countries', {statusCode: UNAUTHORIZED,
+                    countries: [], errors: [{ msg: UNAUTHORIZED_MSG }]});
+            }
+            else {
+                socket.emit('get countries', {statusCode: OK, countries: COUNTRIES, errors: []});
+            }
+        });
+    });
+
+    socket.on('delete actor', (actorId, token) => {
+        jwt.verify(token, config.KEY, function(err, decoded) {
+            if (err) {
+                socket.emit('delete actor', {statusCode: UNAUTHORIZED,
+                    errors: [{ msg: UNAUTHORIZED_MSG }]});
+            }
+            else {
+                deleteActor(actorId, (res) => {
+                    socket.emit('delete actor', res);
+                    getActors((res) => {
+                        socket.broadcast.emit('get actors', res);
+                    })
+                });
+            }
+        });
+    });
+
+    socket.on('insert actor', (actorId, actor, token) => {
+        jwt.verify(token, config.KEY, function(err, decoded) {
+            if (err) {
+                socket.emit('insert actor', {statusCode: UNAUTHORIZED,
+                    errors: [{ msg: UNAUTHORIZED_MSG }]});
+            }
+            else {
+                insertActor(actor, (res) => {
+                    socket.emit('insert actor', res);
+                    getActors((res) => {
+                        socket.broadcast.emit('get actors', res);
+                    })
+                });
+            }
+        });
+    });
+
+    socket.on('update actor', (actorId, actor, token) => {
+        jwt.verify(token, config.KEY, function(err, decoded) {
+            if (err) {
+                socket.emit('update actor', {statusCode: UNAUTHORIZED,
+                    errors: [{ msg: UNAUTHORIZED_MSG }]});
+            }
+            else {
+                updateActor(actor, actorId, (res) => {
+                    socket.emit('update actor', res);
+                    getActors((res) => {
+                        socket.broadcast.emit('get actors', res);
+                    })
+                });
+            }
+        });
+    });
+
+    socket.on('get actor', (actorId, token) => {
+        jwt.verify(token, config.KEY, function(err, decoded) {
+            if (err) {
+                socket.emit('get actor', {statusCode: UNAUTHORIZED,
+                    row: [], errors: [{ msg: UNAUTHORIZED_MSG }]});
+            }
+            else {
+                getActor(actorId, (res) => {
+                    socket.emit('get actor', res);
+                });
+            }
+        });
+    });
+
+    socket.on('get actors', (token) => {
+        jwt.verify(token, config.KEY, function(err, decoded) {
+            if (err) {
+                socket.emit('get actors', {statusCode: UNAUTHORIZED,
+                    rows: [], errors: [{ msg: UNAUTHORIZED_MSG }]});
+            }
+            else {
+                getActors((res) => {
+                    socket.emit('get actors', res);
+                });
+            }
+        });
+    });
+
+    socket.on('delete user', (userId, token) => {
+        jwt.verify(token, config.KEY, function(err, decoded) {
+            if (err) {
+                socket.emit('delete user', {statusCode: UNAUTHORIZED,
+                    errors: [{ msg: UNAUTHORIZED_MSG }]});
+            }
+            else {
+                deleteUser(userId, (res) => {
+                    socket.emit('delete user', res);
+                    getUsers((res) => {
+                        socket.broadcast.emit('get users', res);
+                    })
+                });
+            }
+        });
+    });
+
+    socket.on('insert user', (userId, user, token) => {
+        jwt.verify(token, config.KEY, function(err, decoded) {
+            if (err) {
+                socket.emit('insert user', {statusCode: UNAUTHORIZED,
+                    errors: [{ msg: UNAUTHORIZED_MSG }]});
+            }
+            else {
+                insertUser(user, (res) => {
+                    socket.emit('insert user', res);
+                    getUsers((res) => {
+                        socket.broadcast.emit('get users', res);
+                    })
+                });
+            }
+        });
+    });
+
+    socket.on('update user', (userId, user, token) => {
+        jwt.verify(token, config.KEY, function(err, decoded) {
+            if (err) {
+                socket.emit('update user', {statusCode: UNAUTHORIZED,
+                    errors: [{ msg: UNAUTHORIZED_MSG }]});
+            }
+            else {
+                updateUser(user, userId, (res) => {
+                    socket.emit('update user', res);
+                    getUsers((res) => {
+                        socket.broadcast.emit('get users', res);
+                    })
+                });
+            }
+        });
+    });
+
+    socket.on('get user', (userId, token) => {
+        jwt.verify(token, config.KEY, function(err, decoded) {
+            if (err) {
+                socket.emit('get user', {statusCode: UNAUTHORIZED,
+                    row: [], errors: [{ msg: UNAUTHORIZED_MSG }]});
+            }
+            else {
+                getUser(userId, (res) => {
+                    socket.emit('get user', res);
+                });
+            }
+        });
+    });
+
+    socket.on('get users', (token) => {
+        jwt.verify(token, config.KEY, function(err, decoded) {
+            if (err) {
+                socket.emit('get users', {statusCode: UNAUTHORIZED,
+                    rows: [], errors: [{ msg: UNAUTHORIZED_MSG }]});
+            }
+            else {
+                getUsers((res) => {
+                    socket.emit('get users', res);
+                });
+            }
+        });
+    });
+
+    socket.on('get index', (token) => {
+        jwt.verify(token, config.KEY, function(err, decoded) {
+            if (err) {
+                socket.emit('get index', {statusCode: UNAUTHORIZED,
+                    errors: [{ msg: UNAUTHORIZED_MSG }]});
+            }
+            else {
+                socket.emit('get index', {statusCode: NO_CONTENT, errors: []});
+            }
+        });
+    });
+
+    io.sockets.on('disconnect', () => {
+        io.sockets.removeAllListners();
+    })
+
 });
 
 // Starting to listen
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(SERVER_LOG);
 });

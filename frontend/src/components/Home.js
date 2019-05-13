@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { Redirect } from 'react-router-dom';
-import axios from 'axios';
+import socketIOClient from 'socket.io-client';
 
 import '../styles/cards.css';
 
@@ -16,14 +16,17 @@ class Home extends Component {
         this.state = {
             tables: ['users', 'series', 'actors', 'actorsinseries'],
             tablesAlt: ['Users', 'Series', 'Actors', 'Actors In Series'],
-            route: 'http://localhost:8080/',
+            endpoint: 'http://localhost:8080/',
             authorized: true,
             errors: []
         };
 
         this.statusCodes = {
+            NO_CONTENT: 204,
             UNAUTHORIZED: 401,
         };
+
+        this.socket = socketIOClient(this.state.endpoint);
 
     }
 
@@ -32,23 +35,28 @@ class Home extends Component {
     }
 
     checkAccess() {
-        axios.get(`${this.state.route}`, {withCredentials: true})
-        .then(response => {
-            this.setState({
-                authorized: true,
-                errors: []
-            })
-        })
-        .catch(err => {
-            console.log(err);
-            if (err.response && err.response.status ===
-                this.statusCodes.UNAUTHORIZED) {
+
+        const token = document.cookie.replace(/(?:(?:^|.*;\s*)auth\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+
+        this.socket.emit('get index', token);
+        this.socket.on('get index', (res) => {
+            if (res.statusCode === this.statusCodes.NO_CONTENT) {
                 this.setState({
-                    authorized: false,
-                    errors: err.response.data.errors
-                });
+                    authorized: true,
+                    errors: []
+                })
             }
-        })
+            else {
+                console.log(`${res.statusCode}: ${res.errors}`);
+                if (res.statusCode === this.statusCodes.UNAUTHORIZED) {
+                    this.setState({
+                        authorized: false,
+                        errors: res.errors
+                    });
+                }
+            }
+        });
+
     }
 
     render() {

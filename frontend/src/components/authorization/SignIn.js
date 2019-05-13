@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { Redirect, Link } from 'react-router-dom';
-import axios from 'axios';
+import socketIOClient from 'socket.io-client';
 
 class SignIn extends Component {
 
@@ -10,7 +10,7 @@ class SignIn extends Component {
 
         this.state = {
             table: 'administrators',
-            route: 'http://localhost:8080/',
+            endpoint: 'http://localhost:8080/',
             columns: ['id', 'login', 'password'],
             columnsAlt: ['#', 'Login', 'Password'],
             administrator: {
@@ -22,6 +22,7 @@ class SignIn extends Component {
         }
 
         this.statusCodes = {
+            OK: 200,
             BAD_REQUEST: 400,
             INTERNAL_SERVER_ERROR: 500
         };
@@ -30,6 +31,8 @@ class SignIn extends Component {
         this.onChangePassword = this.onChangePassword.bind(this);
 
         this.onSubmit = this.onSubmit.bind(this);
+
+        this.socket = socketIOClient(this.state.endpoint);
 
     }
 
@@ -60,25 +63,26 @@ class SignIn extends Component {
             password: this.state.administrator.password
         };
 
-        axios.post(`${this.state.route}signin`, obj, {withCredentials: true})
-        .then(response => {
-            this.setState({
-                signedIn: true,
-                errors: []
-            });
-            console.log(response);
-        })
-        .catch(err => {
-            console.log(err);
-            if (err.response && (err.response.status ===
-                this.statusCodes.INTERNAL_SERVER_ERROR ||
-                err.response.status === this.statusCodes.BAD_REQUEST)) {
+        this.socket.emit('sign in', obj);
+        this.socket.on('sign in', (res) => {
+            if (res.statusCode === this.statusCodes.OK) {
+                document.cookie = `auth=${res.token}`;
                 this.setState({
-                    signedIn: false,
-                    errors: err.response.data.errors
-                });
+                    signedIn: true,
+                    errors: []
+                })
             }
-        })
+            else {
+                console.log(`${res.statusCode}: ${res.errors}`);
+                if (res.statusCode === this.statusCodes.INTERNAL_SERVER_ERROR ||
+                    res.statusCode === this.statusCodes.BAD_REQUEST) {
+                    this.setState({
+                        signedIn: false,
+                        errors: res.errors
+                    });
+                }
+            }
+        });
 
     }
 

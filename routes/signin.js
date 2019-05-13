@@ -1,7 +1,7 @@
+const main = require('../main');
+
 const md5 = require('md5');
 const config = require('../config');
-
-const main = require('../main');
 
 // Some information for queries
 const TABLE = 'administrators';
@@ -11,40 +11,39 @@ const MSG_CANNOT_FIND = 'The administrator hasn\'t been signed up in the system!
 const MSG_INCORRECT_PASSWORD = 'Incorrect password!';
 
 module.exports = {
-    signIn: (req, res) => {
-        var sql = `SELECT * FROM ${TABLE} WHERE login = "${req.body.login}";`;
+    signIn: (administrator, callback) => {
+        var sql = `SELECT * FROM ${TABLE} WHERE login = "${administrator.login}";`;
         main.db.query(sql, function (err, result) {
 
             if (err) {
                 console.log(err);
-                res.status(main.INTERNAL_SERVER_ERROR).json({errors:
-                    [{ msg: main.INTERNAL_ERROR_MSG }]});
+                callback({statusCode: main.INTERNAL_SERVER_ERROR, errors:
+                    [{ msg: main.INTERNAL_ERROR_MSG }], token: null});
                 return;
             }
 
             if (result.length === 0) {
-                res.status(main.BAD_REQUEST).json({errors:
-                    [{ msg: MSG_CANNOT_FIND }]});
+                callback({statusCode: main.BAD_REQUEST, errors:
+                    [{ msg: MSG_CANNOT_FIND }], token: null});
                 return;
             }
 
-            if (md5(req.body.password) === result[0].password) {
+            if (md5(administrator.password) === result[0].password) {
 
-                const token = jwt.sign({
+                const token = main.jwt.sign({
                     login: result[0].login,
                     password: result[0].password
                 }, config.KEY,
                     { expiresIn: config.TIME_JWT }
                 );
 
-                res.cookie('auth', token, { httpOnly: true,
-                    maxAge: config.TIME_COOKIE });
-                res.sendStatus(main.OK);
+                callback({statusCode: main.OK, errors:
+                    [], token: token});
 
             }
             else {
-                res.status(main.BAD_REQUEST).json({errors:
-                    [{ msg: MSG_INCORRECT_PASSWORD }]});
+                callback({statusCode: main.BAD_REQUEST, errors:
+                    [{ msg: MSG_INCORRECT_PASSWORD }], token: null});
             }
 
         });

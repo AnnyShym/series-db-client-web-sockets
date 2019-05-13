@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { Redirect, Link } from 'react-router-dom';
-import axios from 'axios';
+import socketIOClient from 'socket.io-client';
 
 import Table from '../Table';
 
@@ -12,7 +12,7 @@ class Users extends Component {
 
         this.state = {
             table: 'users',
-            route: 'http://localhost:8080/',
+            endpoint: 'http://localhost:8080/',
             columns: ['#', 'Login', 'Password'],
             rows: [],
             authorized: true,
@@ -20,9 +20,12 @@ class Users extends Component {
         };
 
         this.statusCodes = {
+            OK: 200,
             UNAUTHORIZED: 401,
             INTERNAL_SERVER_ERROR: 500
         };
+
+        this.socket = socketIOClient(this.state.endpoint);
 
     }
 
@@ -31,32 +34,36 @@ class Users extends Component {
     }
 
     getUsers() {
-        axios.get(`${this.state.route}${this.state.table}`, {withCredentials: true})
-        .then(response => {
-            this.setState({
-                rows: response.data.rows,
-                authorized: true,
-                errors: []
-            })
-        })
-        .catch(err => {
-            console.log(err);
-            if (err.response && err.response.status ===
-                this.statusCodes.UNAUTHORIZED) {
+
+        const token = document.cookie.replace(/(?:(?:^|.*;\s*)auth\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+
+        this.socket.emit('get users', token);
+        this.socket.on('get users', (res) => {
+            if (res.statusCode === this.statusCodes.OK) {
                 this.setState({
-                    rows: [],
-                    authorized: false,
-                    errors: err.response.data.errors
-                });
+                    rows: res.rows,
+                    authorized: true,
+                    errors: []
+                })
             }
-            if (err.response && err.response.status ===
-                this.statusCodes.INTERNAL_SERVER_ERROR) {
-                this.setState({
-                    rows: [],
-                    errors: err.response.data.errors
-                });
+            else {
+                console.log(`${res.statusCode}: ${res.errors}`);
+                if (res.statusCode === this.statusCodes.UNAUTHORIZED) {
+                    this.setState({
+                        rows: [],
+                        authorized: false,
+                        errors: res.errors
+                    });
+                }
+                if (res.statusCode === this.statusCodes.INTERNAL_SERVER_ERROR) {
+                    this.setState({
+                        rows: [],
+                        errors: res.errors
+                    });
+                }
             }
-        })
+        });
+
     }
 
     getUserInfo(table, row) {

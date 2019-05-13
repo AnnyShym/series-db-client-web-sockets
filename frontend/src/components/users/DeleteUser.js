@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { Redirect } from 'react-router-dom';
-import axios from 'axios';
+import socketIOClient from 'socket.io-client';
 
 class DeleteUser extends Component {
 
@@ -10,17 +10,20 @@ class DeleteUser extends Component {
 
         this.state = {
             table: 'users',
-            route: 'http://localhost:8080/',
+            endpoint: 'http://localhost:8080/',
             authorized: true,
             deleted: false,
             errors: []
         }
 
         this.statusCodes = {
+            NO_CONTENT: 204,
             BAD_REQUEST: 400,
             UNAUTHORIZED: 401,
             INTERNAL_SERVER_ERROR: 500
         };
+
+        this.socket = socketIOClient(this.state.endpoint);
 
     }
 
@@ -29,34 +32,37 @@ class DeleteUser extends Component {
     }
 
     deleteUser(userId) {
-        axios.post(`${this.state.route}${this.state.table}/delete/${userId}`,
-            {}, {withCredentials: true})
-        .then(response => {
-            this.setState({
-                authorized: true,
-                deleted: true,
-                errors: []
-            })
-        })
-        .catch(err => {
-            console.log(err);
-            if (err.response && err.response.status ===
-                this.statusCodes.UNAUTHORIZED) {
+
+        const token = document.cookie.replace(/(?:(?:^|.*;\s*)auth\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+
+        this.socket.emit('delete user', userId, token);
+        this.socket.on('delete user', (res) => {
+            if (res.statusCode === this.statusCodes.NO_CONTENT) {
                 this.setState({
-                    authorized: false,
-                    deleted: false,
-                    errors: err.response.data.errors
-                });
+                    authorized: true,
+                    deleted: true,
+                    errors: []
+                })
             }
-            if (err.response && (err.response.status ===
-                this.statusCodes.INTERNAL_SERVER_ERROR ||
-                err.response.status === this.statusCodes.BAD_REQUEST)) {
-                this.setState({
-                    deleted: false,
-                    errors: err.response.data.errors
-                });
+            else {
+                console.log(`${res.statusCode}: ${res.errors}`);
+                if (res.statusCode === this.statusCodes.UNAUTHORIZED) {
+                    this.setState({
+                        authorized: false,
+                        deleted: false,
+                        errors: res.errors
+                    });
+                }
+                if (res.statusCode === this.statusCodes.INTERNAL_SERVER_ERROR ||
+                    res.statusCode === this.statusCodes.BAD_REQUEST) {
+                    this.setState({
+                        rows: [],
+                        errors: res.errors
+                    });
+                }
             }
-        })
+        });
+
     }
 
     render() {

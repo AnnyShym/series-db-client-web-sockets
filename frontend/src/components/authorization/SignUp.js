@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { Redirect, Link } from 'react-router-dom';
-import axios from 'axios';
+import socketIOClient from 'socket.io-client';
 
 class SignUp extends Component {
 
@@ -10,7 +10,7 @@ class SignUp extends Component {
 
         this.state = {
             table: 'administrators',
-            route: 'http://localhost:8080/',
+            endpoint: 'http://localhost:8080/',
             columns: ['id', 'login', 'password'],
             columnsAlt: ['#', 'Login', 'Password'],
             administrator: {
@@ -22,6 +22,7 @@ class SignUp extends Component {
         }
 
         this.statusCodes = {
+            CREATED: 201,
             BAD_REQUEST: 400,
             INTERNAL_SERVER_ERROR: 500
         };
@@ -30,6 +31,8 @@ class SignUp extends Component {
         this.onChangePassword = this.onChangePassword.bind(this);
 
         this.onSubmit = this.onSubmit.bind(this);
+
+        this.socket = socketIOClient(this.state.endpoint);
 
     }
 
@@ -60,24 +63,25 @@ class SignUp extends Component {
             password: this.state.administrator.password
         };
 
-        axios.post(`${this.state.route}signup`, obj)
-        .then(response => {
-            this.setState({
-                signedUp: true,
-                errors: []
-            })
-        })
-        .catch(err => {
-            console.log(err);
-            if (err.response && (err.response.status ===
-                this.statusCodes.INTERNAL_SERVER_ERROR ||
-                err.response.status === this.statusCodes.BAD_REQUEST)) {
+        this.socket.emit('sign up', obj);
+        this.socket.on('sign up', (res) => {
+            if (res.statusCode === this.statusCodes.CREATED) {
                 this.setState({
-                    signedUp: false,
-                    errors: err.response.data.errors
-                });
+                    signedUp: true,
+                    errors: []
+                })
             }
-        })
+            else {
+                console.log(`${res.statusCode}: ${res.errors}`);
+                if (res.statusCode === this.statusCodes.INTERNAL_SERVER_ERROR ||
+                    res.statusCode === this.statusCodes.BAD_REQUEST) {
+                    this.setState({
+                        signedUp: false,
+                        errors: res.errors
+                    });
+                }
+            }
+        });
 
     }
 

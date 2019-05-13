@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { Redirect } from 'react-router-dom';
-import axios from 'axios';
+import socketIOClient from 'socket.io-client';
 
 class ChangeActor extends Component {
 
@@ -10,7 +10,7 @@ class ChangeActor extends Component {
 
         this.state = {
             table: 'actors',
-            route: 'http://localhost:8080/',
+            endpoint: 'http://localhost:8080/',
             columns: ['id', 'name', 'middle_name', 'last_name', 'citizenship'],
             columnsAlt: ['#', 'Name', 'Middle Name', 'Last Name', 'Citizenship'],
             countries: [],
@@ -26,6 +26,9 @@ class ChangeActor extends Component {
         }
 
         this.statusCodes = {
+            OK: 200,
+            CREATED: 201,
+            NO_CONTENT: 204,
             BAD_REQUEST: 400,
             UNAUTHORIZED: 401,
             INTERNAL_SERVER_ERROR: 500
@@ -41,6 +44,8 @@ class ChangeActor extends Component {
 
         this.onSubmit = this.onSubmit.bind(this);
 
+        this.socket = socketIOClient(this.state.endpoint);
+
     }
 
     componentDidMount() {
@@ -48,73 +53,80 @@ class ChangeActor extends Component {
         this.getCountries();
 
         if (this.props.match.params.operation === this.opUpdate) {
-            this.getActorInfo();
+            this.getActorInfo(this.props.match.params.id);
         }
 
     }
 
     getCountries() {
-        axios.get(`${this.state.route}${this.state.table}/countries`,
-            {withCredentials: true})
-        .then(response => {
-            this.setState({
-                countries: response.data.countries,
-                authorized: true,
-                errors: []
-            })
-        })
-        .catch(err => {
-            console.log(err);
-            if (err.response && err.response.status ===
-                this.statusCodes.UNAUTHORIZED) {
+
+        const token = document.cookie.replace(/(?:(?:^|.*;\s*)auth\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+
+        this.socket.emit('get countries', token);
+        this.socket.on('get countries', (res) => {
+            if (res.statusCode === this.statusCodes.OK) {
                 this.setState({
-                    countries: [],
-                    authorized: false,
-                    errors: err.response.data.errors
-                });
+                    countries: res.countries,
+                    authorized: true,
+                    errors: []
+                })
             }
-        })
+            else {
+                console.log(`${res.statusCode}: ${res.errors}`);
+                if (res.statusCode === this.statusCodes.UNAUTHORIZED) {
+                    this.setState({
+                        countries: [],
+                        authorized: false,
+                        errors: res.errors
+                    });
+                }
+            }
+        });
+
     }
 
-    getActorInfo() {
-        axios.get(`${this.state.route}${this.state.table}/${
-            this.props.match.params.id}`, {withCredentials: true})
-        .then(response => {
-            this.setState({
-                actor: response.data.row[0],
-                authorized: true,
-                errors: []
-            })
-        })
-        .catch(err => {
-            console.log(err);
-            if (err.response && err.response.status ===
-                this.statusCodes.UNAUTHORIZED) {
+    getActorInfo(actorId) {
+
+        const token = document.cookie.replace(/(?:(?:^|.*;\s*)auth\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+
+        this.socket.emit('get actor', actorId, token);
+        this.socket.on('get actor', (res) => {
+            if (res.statusCode === this.statusCodes.OK) {
                 this.setState({
-                    actor: {
-                        name: '',
-                        middle_name: '',
-                        last_name: '',
-                        citizenship: 'NULL'
-                    },
-                    authorized: false,
-                    errors: err.response.data.errors
-                });
+                    actor: res.row[0],
+                    authorized: true,
+                    errors: []
+                })
             }
-            if (err.response && (err.response.status ===
-                this.statusCodes.INTERNAL_SERVER_ERROR ||
-                err.response.status === this.statusCodes.BAD_REQUEST)) {
-                this.setState({
-                    actor: {
-                        name: '',
-                        middle_name: '',
-                        last_name: '',
-                        citizenship: 'NULL'
-                    },
-                    errors: err.response.data.errors
-                });
+            else {
+                console.log(`${res.statusCode}: ${res.errors}`);
+                if (res.statusCode === this.statusCodes.UNAUTHORIZED) {
+                    this.setState({
+                        actor: {
+                            name: '',
+                            middle_name: '',
+                            last_name: '',
+                            citizenship: 'NULL'
+                        },
+                        authorized: false,
+                        errors: res.errors
+                    });
+                }
+                if (res.statusCode === this.statusCodes.INTERNAL_SERVER_ERROR ||
+                    res.statusCode === this.statusCodes.BAD_REQUEST) {
+                    this.setState({
+                        actor: {
+                            name: '',
+                            middle_name: '',
+                            last_name: '',
+                            citizenship: 'NULL'
+                        },
+                        errors: res.errors
+                    });
+                }
             }
-        })
+        });
+
     }
 
     onChangeName(e) {
@@ -165,43 +177,45 @@ class ChangeActor extends Component {
             citizenship: this.state.actor.citizenship,
         };
 
-        let route = null;
+        let id = null;
         if (this.props.match.params.operation === this.opInsert) {
-            route = `${this.state.route}${this.state.table}/${
-                this.props.match.params.operation}`
+            id = null;
         }
         else {
-            route = `${this.state.route}${this.state.table}/${
-                this.props.match.params.operation}/${this.props.match.params.id}`;
+            id = this.props.match.params.id;
         }
 
-        axios.post(route, obj, {withCredentials: true})
-        .then(response => {
-            this.setState({
-                authorized: true,
-                changed: true,
-                errors: []
-            })
-        })
-        .catch(err => {
-            console.log(err);
-            if (err.response && err.response.status ===
-                this.statusCodes.UNAUTHORIZED) {
+        const token = document.cookie.replace(/(?:(?:^|.*;\s*)auth\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+
+        this.socket.emit(`${this.props.match.params.operation} actor`, id, obj,
+            token);
+        this.socket.on(`${this.props.match.params.operation} actor`, (res) => {
+            if (res.statusCode === this.statusCodes.CREATED ||
+                res.statusCode === this.statusCodes.NO_CONTENT) {
                 this.setState({
-                    authorized: false,
-                    changed: false,
-                    errors: err.response.data.errors
-                });
+                    authorized: true,
+                    changed: true,
+                    errors: []
+                })
             }
-            if (err.response && (err.response.status ===
-                this.statusCodes.INTERNAL_SERVER_ERROR ||
-                err.response.status === this.statusCodes.BAD_REQUEST)) {
-                this.setState({
-                    changed: false,
-                    errors: err.response.data.errors
-                });
+            else {
+                console.log(`${res.statusCode}: ${res.errors}`);
+                if (res.statusCode === this.statusCodes.UNAUTHORIZED) {
+                    this.setState({
+                        authorized: false,
+                        changed: false,
+                        errors: res.errors
+                    });
+                }
+                if (res.statusCode === this.statusCodes.INTERNAL_SERVER_ERROR ||
+                    res.statusCode === this.statusCodes.BAD_REQUEST) {
+                    this.setState({
+                        changed: false,
+                        errors: res.errors
+                    });
+                }
             }
-        })
+        });
 
     }
 
